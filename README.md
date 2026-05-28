@@ -7,6 +7,8 @@
 
 [Músicas](https://www.khinsider.com/midi/nes/mega-man-2)
 
+[Repositório Lamar](https://github.com/victorlisboa/LAMAR)
+
 
 **Requisitos:**
 1) (0,5) Música e efeitos sonoros.
