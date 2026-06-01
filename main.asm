@@ -296,7 +296,7 @@ MOVE_UP:
 
     li   s2, 0
 PULO_SUBIDA:
-    li   t0, 13
+    li   t0, 70
     beq  s2, t0, CONFIG_DESGIDA
 
     la   t0, CHAR_POS
@@ -310,6 +310,7 @@ PULO_SUBIDA:
 MS_OK:
     sh   t1, 2(t0)
 
+    call VERIFICA_AIR_CONTROL
     call REDESENHAR_FRAME_PULO
 
     addi s2, s2, 1
@@ -318,7 +319,7 @@ MS_OK:
 CONFIG_DESGIDA:
     li   s2, 0
 PULO_DESCIDA:
-    li   t0, 13
+    li   t0, 70
     beq  s2, t0, FIM_PULO
 
     la   t0, CHAR_POS
@@ -332,6 +333,7 @@ PULO_DESCIDA:
 MD_OK_PULO:
     sh   t1, 2(t0)
 
+    call VERIFICA_AIR_CONTROL
     call REDESENHAR_FRAME_PULO
 
     addi s2, s2, 1
@@ -342,6 +344,109 @@ FIM_PULO:
     lw   s2, 4(sp)
     lw   s3, 8(sp)
     addi sp, sp, 16
+    ret
+
+VERIFICA_AIR_CONTROL:
+    addi sp, sp, -4
+    sw   ra, 0(sp)
+
+    li   t1, 0xFF200000
+    lw   t0, 0(t1)
+    andi t0, t0, 0x0001
+    beq  t0, zero, FIM_AIR_CONTROL
+    lw   t2, 4(t1)
+
+    li   t0, 'a'
+    beq  t2, t0, AIR_MOVE_LEFT
+
+    li   t0, 'd'
+    beq  t2, t0, AIR_MOVE_RIGHT
+    j    FIM_AIR_CONTROL
+
+AIR_MOVE_LEFT:
+    la   t0, FELIX_DIR
+    li   t1, 1
+    sw   t1, 0(t0)
+
+    la   t0, BG_POS
+    lh   t1, 0(t0)
+    la   t2, BG_X_MIN
+    lh   t2, 0(t2)
+    beq  t1, t2, AIR_LEFT_FELIX
+
+    la   t3, CHAR_POS
+    lh   t4, 0(t3)
+    li   t5, 30
+    bgt  t4, t5, AIR_LEFT_FELIX
+
+    addi t1, t1, -2
+    bge  t1, t2, AIR_ML_BG_OK
+    mv   t1, t2
+AIR_ML_BG_OK:
+    sh   t1, 0(t0)
+    j    FIM_AIR_CONTROL
+
+AIR_LEFT_FELIX:
+    la   t3, CHAR_POS
+    lh   t4, 0(t3)
+    addi t4, t4, -2
+    la   t2, FELIX_X_MIN
+    lh   t2, 0(t2)
+    bge  t4, t2, AIR_ML_FX_OK
+    mv   t4, t2
+AIR_ML_FX_OK:
+    sh   t4, 0(t3)
+    j    FIM_AIR_CONTROL
+
+AIR_MOVE_RIGHT:
+    la   t0, FELIX_DIR
+    li   t1, 0
+    sw   t1, 0(t0)
+
+    la   t3, CHAR_POS
+    lh   t4, 0(t3)
+    li   t5, 274
+    blt  t4, t5, AIR_RIGHT_FELIX
+
+    la   t0, BG_POS
+    lh   t1, 0(t0)
+    la   t2, BG_X_MAX
+    lh   t2, 0(t2)
+    beq  t1, t2, AIR_RIGHT_FELIX
+
+    addi t1, t1, 2
+    ble  t1, t2, AIR_MR_BG_OK
+    mv   t1, t2
+AIR_MR_BG_OK:
+    sh   t1, 0(t0)
+    j    FIM_AIR_CONTROL
+
+AIR_RIGHT_FELIX:
+    la   t3, CHAR_POS
+    lh   t4, 0(t3)
+    la   t0, BG_POS
+    lh   t1, 0(t0)
+    la   t2, BG_X_MAX
+    lh   t2, 0(t2)
+    beq  t1, t2, AIR_MR_FX_LIMIT
+    li   t5, 274
+    blt  t4, t5, AIR_MR_FX_CONTINUE
+    mv   t4, t5
+    j    AIR_MR_FX_OK
+AIR_MR_FX_LIMIT:
+    la   t2, FELIX_X_MAX
+    lh   t2, 0(t2)
+    blt  t4, t2, AIR_MR_FX_CONTINUE
+    mv   t4, t2
+    j    AIR_MR_FX_OK
+AIR_MR_FX_CONTINUE:
+    addi t4, t4, 2
+AIR_MR_FX_OK:
+    sh   t4, 0(t3)
+
+FIM_AIR_CONTROL:
+    lw   ra, 0(sp)
+    addi sp, sp, 4
     ret
 
 REDESENHAR_FRAME_PULO:
