@@ -4,7 +4,6 @@
 # ==============================================================================================
 .data
 
-# Diretivas de inclusão dos arquivos de imagem (.data) convertidos para formato Bitmap
 .include "imagens/felix.data"
 .include "imagens/fundo.data"
 .include "imagens/tile.data"
@@ -15,33 +14,27 @@
 .include "imagens/FelixOutroLadoRebaixado.data"
 .include "imagens/FelixRebaixado.data"
 
-# Estrutura de dados para reprodução da música (Midi / Áudio)
-# Formato: [Quantidade de notas, Índice da nota atual, Timestamp da última nota, (Nota, Duração, Instrumento)...]
 notas: .word 9, 0, 0, 67, 1000, 0, 74, 1000, 0, 70, 1500, 0, 69, 500, 0, 67, 500, 0, 70, 500, 0, 69, 500, 0, 67, 500, 0, 66, 500, 0,
 
-# Variáveis de Posicionamento e Controle
-CHAR_POS:     .half 30, 120       # Posição atual do Félix na tela: X (coluna), Y (linha)
-OLD_CHAR_POS: .half 0, 0          # Posição anterior do Félix (para controle de rastro ou lógica antiga)
+CHAR_POS:     .half 30, 120
+OLD_CHAR_POS: .half 0, 0
 
-BG_POS:     .half 0, 0            # Posição atual de leitura do fundo (Scroll X, Scroll Y)
-OLD_BG_POS: .half 0, 0            # Posição anterior de leitura do fundo
+BG_POS:     .half 0, 0
+OLD_BG_POS: .half 0, 0
 
-# Limites de movimentação do cenário de fundo (Câmera)
-BG_X_MIN:  .half 0                # Limite mínimo de rolagem do cenário para a esquerda
-BG_X_MAX:  .half 80               # Limite máximo de rolagem do cenário para a direita
+BG_X_MIN:  .half 0
+BG_X_MAX:  .half 80
 
-# Limites absolutos do personagem Félix na janela de exibição da tela (320x240)
-FELIX_X_MIN: .half 0              # Limite físico esquerdo para o personagem
-FELIX_X_MAX: .half 304            # Limite físico direito (320 total - largura aproximada do sprite)
-FELIX_Y_MIN: .half 0              # Limite físico superior para o personagem
-FELIX_Y_MAX: .half 224            # Limite físico inferior (240 total - altura aproximada do sprite)
+FELIX_X_MIN: .half 0
+FELIX_X_MAX: .half 304
+FELIX_Y_MIN: .half 0
+FELIX_Y_MAX: .half 224
 
-FELIX_DIR:   .word 1              # Direção do Félix: 0 = Olhando para a Direita, 1 = Olhando para a Esquerda
-FELIX_FRAME: .word 0              # Contador de ciclos/frames globais usado para ditar a velocidade da animação
+FELIX_DIR:   .word 1
+FELIX_FRAME: .word 0
 
-# Novas Variáveis de Física (Gravidade e Pulo)
-VEL_Y:       .word 0              # Velocidade vertical atual do personagem
-ESTA_NO_AR:  .word 1              # Estado do pulo: 0 = No chão, 1 = No ar
+VEL_Y:       .word 0
+ESTA_NO_AR:  .word 1
 
 # ==============================================================================================
 # SEÇÃO DE CÓDIGO (.text)
@@ -49,439 +42,386 @@ ESTA_NO_AR:  .word 1              # Estado do pulo: 0 = No chão, 1 = No ar
 # ==============================================================================================
 .text
 
-# ----------------------------------------------------------------------------------------------
-# SETUP: Tela Inicial
-# Exibe a tela de introdução do jogo no Framebuffer 0 e aguarda a interação do usuário.
-# ----------------------------------------------------------------------------------------------
 SETUP:
-    la  a0, telainicial           # Endereço da imagem da tela inicial
-    li  a1, 0                     # Posição X = 0
-    li  a2, 0                     # Posição Y = 0
-    li  a3, 0                     # Framebuffer alvo = 0
-    call PRINT                    # Renderiza a imagem na tela
+    la  a0, telainicial
+    li  a1, 0
+    li  a2, 0
+    li  a3, 0
+    call PRINT
 
-# ----------------------------------------------------------------------------------------------
-# KEY1: Espera por Tecla
-# Loop de polling que trava a execução até que qualquer tecla seja pressionada no teclado do simulador.
-# ----------------------------------------------------------------------------------------------
 KEY1:
-    li  t1, 0xFF200000            # Endereço de controle do Teclado (MMIO)
+    li  t1, 0xFF200000
 WAIT_KEY:
-    lw  t0, 0(t1)                 # Lê o status do teclado
-    andi t0, t0, 0x0001           # Isola o bit de "tecla pressionada"
-    beq t0, zero, WAIT_KEY        # Se for 0 (nenhuma tecla), continua esperando
-    lw  t2, 4(t1)                 # Lê o código ASCII da tecla pressionada
-    sw  t2, 12(t1)                # Limpa o buffer de entrada do teclado escrevendo no receptor
+    lw  t0, 0(t1)
+    andi t0, t0, 0x0001
+    beq t0, zero, WAIT_KEY
+    lw  t2, 4(t1)
+    sw  t2, 12(t1)
 
-    # Desenha o fundo inicial em ambos os Framebuffers (0 e 1) para preparar o Double Buffering
-    la   a0, fundo                # Endereço da imagem de fundo
-    lh   a1, 0(a0)                # Passa a largura/posição inicial para o buffer
+    la   a0, fundo
+    lh   a1, 0(a0)
     li   a2, 0
-    li   a3, 0                    # Renderiza no Framebuffer 0
+    li   a3, 0
     call PRINT_BACKGROUND
-    li   a3, 1                    # Renderiza no Framebuffer 1
+    li   a3, 1
     call PRINT_BACKGROUND
 
-# ----------------------------------------------------------------------------------------------
-# GAME_LOOP: Loop Principal do Jogo
-# Controla o fluxo cíclico: Áudio -> Animação -> Entrada -> Física/Gravidade -> Desenho -> Inversão de Tela -> Delay
-# ----------------------------------------------------------------------------------------------
 GAME_LOOP:
+    la  s1, notas
+    lw  s2, 0(s1)
+    lw  s3, 4(s1)
+    lw  s4, 8(s1)
 
-    # ------------------------------------------------------------------------------------------
-    # SISTEMA DE ÁUDIO/MÚSICA: Processamento de Notas via Chamadas de Sistema (Syscalls)
-    # ------------------------------------------------------------------------------------------
-    la  s1, notas                 # Carrega o vetor de controle de notas musicais
-    lw  s2, 0(s1)                 # s2 = Total de notas existentes na partitura
-    lw  s3, 4(s1)                 # s3 = Índice da nota que deve ser tocada no momento
-    lw  s4, 8(s1)                 # s4 = Timestamp em milissegundos de quando a última nota começou
+    li  t0, 12
+    mul s5, t0, s3
+    add s5, s5, s1
 
-    li  t0, 12                    # Cada nota estruturada ocupa 12 bytes (3 palavras de 4 bytes)
-    mul s5, t0, s3                # Multiplica o índice atual pelo tamanho da estrutura
-    add s5, s5, s1                # Aponta para o endereço exato da nota atual
-
-    li  a7, 30                    # Syscall 30: Obtém o tempo atual do sistema em milissegundos
-    ecall                         # Retorna o tempo em a0
-    sub s6, a0, s4                # s6 = Tempo decorrido (Tempo Atual - Tempo da Última Nota)
-
-    lw  t1, 4(s5)                 # Carrega a duração necessária para a nota atual
-    bgtu t1, s6, MF0              # Se a duração for maior que o tempo decorrido, pula o processamento (mantém a nota tocando)
-
-    bne s3, s2, MF1               # Se o índice atual não chegou ao fim da música, pula para tocar
-    li  s3, 0                     # Caso contrário, zera o índice para reiniciar a música (Loop)
-    mv  s5, s1                    # Reseta o ponteiro base de notas para o início
-MF1:
-    addi s5, s5, 12               # Avança para a próxima nota no array
-    li  a7, 31                    # Syscall 31: Toca uma nota MIDI síncrona/assíncrona
-    lw  a0, 0(s5)                 # a0 = Altura da nota (Pitch)
-    lw  a1, 4(s5)                 # a1 = Duração da nota em milissegundos
-    li  a2, 0                     # a2 = Instrumento (0 = Piano)
-    li  a3, 60                    # a3 = Volume (Dinâmica)
-    ecall                         # Executa o som da nota
-    li  a7, 30                    # Syscall 30: Obtém o tempo exato pós-reprodução
+    li  a7, 30
     ecall
-    sw  a0, 8(s1)                 # Atualiza o timestamp da última nota tocada na memória
-    addi s3, s3, 1                # Incrementa o índice da nota
-    sw  s3, 4(s1)                 # Salva o novo índice na variable correspondente
+    sub s6, a0, s4
+
+    lw  t1, 4(s5)
+    bgtu t1, s6, MF0
+
+    bne s3, s2, MF1
+    li  s3, 0
+    mv  s5, s1
+MF1:
+    addi s5, s5, 12
+    li  a7, 31
+    lw  a0, 0(s5)
+    lw  a1, 4(s5)
+    li  a2, 0
+    li  a3, 60
+    ecall
+    li  a7, 30
+    ecall
+    sw  a0, 8(s1)
+    addi s3, s3, 1
+    sw  s3, 4(s1)
 
 MF0:
-    # ------------------------------------------------------------------------------------------
-    # CONTROLE DE FRAME / ANIMAÇÃO
-    # ------------------------------------------------------------------------------------------
-    la  t0, FELIX_FRAME           # Carrega a variável de controle de frames da animação
-    lw  t1, 0(t0)                 # Incrementa o contador global de ticks a cada iteração do loop
+    la  t0, FELIX_FRAME
+    lw  t1, 0(t0)
     addi t1, t1, 1
     sw  t1, 0(t0)
 
-    call SELECT_FELIX             # Escolhe dinamicamente qual sprite do Félix renderizar em a0
-    call KEY2                     # Captura a entrada do teclado e processa a movimentação
+    call SELECT_FELIX
+    call KEY2
     
-    # Aplica o motor de gravidade e colisão a cada ciclo do jogo
     call APLICAR_GRAVIDADE
 
-    xori s0, s0, 1                # Alterna o frame visível/lógico do Double Buffering (0 para 1 ou 1 para 0)
+    xori s0, s0, 1
 
-    # ------------------------------------------------------------------------------------------
-    # RENDERIZAÇÃO DOS GRÁFICOS (Ordem de camadas: Personagem -> Fundo -> Delay)
-    # ------------------------------------------------------------------------------------------
-    la  t0, CHAR_POS              # Carrega a estrutura de posição do Félix
-    lh  a1, 0(t0)                 # a1 = Posição X
-    lh  a2, 2(t0)                 # a2 = Posição Y
-    mv  a3, s0                    # a3 = Framebuffer de escrita atual (s0)
-    call PRINT                    # Desenha o sprite selecionado do personagem
+    la  t0, CHAR_POS
+    lh  a1, 0(t0)
+    lh  a2, 2(t0)
+    mv  a3, s0
+    call PRINT
 
-    li   t0, 0xFF200604           # Endereço de controle do Frame Buffer da placa gráfica (LED de exibição)
-    sw   s0, 0(t0)                # Exibe na tela o frame atual, evitando screen tearing/piscadas
+    li   t0, 0xFF200604
+    sw   s0, 0(t0)
 
-    la   t0, BG_POS               # Carrega a estrutura de posição da Câmera/Fundo
-    la   a0, fundo                # a0 = Endereço da imagem completa de fundo
-    lh   a1, 0(t0)                # a1 = Deslocamento X da câmera
-    lh   a2, 2(t0)                # a2 = Deslocamento Y da câmera (não modificado)
-    mv   a3, s0                   # Determina o Framebuffer oposto para renderização de background
-    xori a3, a3, 1                # Inverte o índice do buffer de escrita secundário
-    call PRINT_BACKGROUND         # Desenha o plano de fundo atualizado com o scroll correspondente
+    la   t0, BG_POS
+    la   a0, fundo
+    lh   a1, 0(t0)
+    lh   a2, 2(t0)
+    mv   a3, s0
+    xori a3, a3, 1
+    call PRINT_BACKGROUND
 
-    # Configuração de taxa de atualização (Frame Rate Delay)
-    li a0, 30                     # Define um tempo de espera de 30 milissegundos
-    li a7, 32                     # Syscall 32: Sleep / Delay de hardware
-    ecall                         # Executa a pausa antes de reiniciar o loop
+    li a0, 30
+    li a7, 32
+    ecall
 
-    j GAME_LOOP                   # Retorna ao início do loop principal do jogo
+    j GAME_LOOP
 
-# ----------------------------------------------------------------------------------------------
-# KEY2: Processamento e Tratamento de Entrada Assíncrona
-# Lê os registradores de entrada do teclado e redireciona o fluxo para a rotina de movimento adequada.
-# ----------------------------------------------------------------------------------------------
 KEY2:
-    li  t1, 0xFF200000            # Endereço base de controle do teclado (Mapeado em Memória)
-    lw  t0, 0(t1)                 # Lê o registrador de status de prontidão
-    andi t0, t0, 0x0001           # Verifica se há um novo caractere disponível
-    beq  t0, zero, KEY2_FIM       # Se nenhuma tecla foi tocada, finaliza a subrotina
-    lw   t2, 4(t1)                # Lê o valor ASCII da tecla correspondente
+    li  t1, 0xFF200000
+    lw  t0, 0(t1)
+    andi t0, t0, 0x0001
+    beq  t0, zero, KEY2_CHECAR_AR
+    lw   t2, 4(t1)
+    j    KEY2_PROCESSA
 
+KEY2_CHECAR_AR:
+    la   t0, ESTA_NO_AR
+    lw   t3, 0(t0)
+    bnez t3, KEY2_CONTINUO
+    j    KEY2_FIM
+
+KEY2_CONTINUO:
+    lw   t2, 4(t1)
+
+KEY2_PROCESSA:
     li  t0, 'a'
-    beq t2, t0, MOVE_LEFT         # Se pressionado 'a', desvia para movimentação à esquerda
+    beq t2, t0, MOVE_LEFT
 
     li  t0, 'd'
-    beq t2, t0, MOVE_RIGHT        # Se pressionado 'd', desvia para movimentação à direita
+    beq t2, t0, MOVE_RIGHT
 
     li  t0, 'w'
-    beq t2, t0, MOVE_UP           # Se pressionado 'w', desvia para rotina de impulso do pulo
+    beq t2, t0, MOVE_UP
 
     li  t0, 's'
-    beq t2, t0, MOVE_DOWN         # Se pressionado 's', desvia para movimentação para baixo
+    beq t2, t0, MOVE_DOWN
 
 KEY2_FIM:
-    ret                           # Retorna para a chamada do Game Loop
+    ret
 
-# ----------------------------------------------------------------------------------------------
-# MOVE_LEFT: Movimentação para a Esquerda ('a')
-# ----------------------------------------------------------------------------------------------
 MOVE_LEFT:
     la  t0, FELIX_DIR
     li  t1, 1
-    sw  t1, 0(t0)                 # Define a direção do Félix como 1 (Olhando para a Esquerda)
+    sw  t1, 0(t0)
 
-    la  t0, BG_POS                # Posição X da Câmera
+    la  t0, BG_POS
     lh  t1, 0(t0)
     
-    la  t2, BG_X_MIN              # Limite mínimo de scroll
+    la  t2, BG_X_MIN
     lh  t2, 0(t2)
-    beq t1, t2, MOVE_LEFT_FELIX   # Se a tela já chegou no limite esquerdo (0), move o Félix diretamente
+    beq t1, t2, MOVE_LEFT_FELIX
 
-    la  t3, CHAR_POS              # Posição X do Félix
+    la  t3, CHAR_POS
     lh  t4, 0(t3)
-    li  t5, 30                    # Ponto de ativação do Scroll Esquerdo
-    bgt t4, t5, MOVE_LEFT_FELIX   # Se o Félix ainda estiver à direita da linha 30, move o Félix em vez da tela
+    li  t5, 30
+    bgt t4, t5, MOVE_LEFT_FELIX
 
-    # Efetua o Scroll: Desloca o fundo para a esquerda
-    addi t1, t1, -2               # Move a câmera em -2 pixels
-    bge t1, t2, ML_BG_OK          # Garante que não ultrapassará o limite mínimo estabelecido
-    mv  t1, t2                    # Se ultrapassar, fixa no valor mínimo
+    addi t1, t1, -2
+    bge t1, t2, ML_BG_OK
+    mv  t1, t2
 ML_BG_OK:
-    sh  t1, 0(t0)                 # Atualiza a nova posição do fundo na memória
-    ret                           # Finaliza a execução do movimento
-
-MOVE_LEFT_FELIX:
-    la  t3, CHAR_POS              # Carrega e atualiza a posição do sprite do personagem
-    lh  t4, 0(t3)
-    addi t4, t4, -2               # Move o Félix em -2 pixels horizontais
-    la  t2, FELIX_X_MIN           # Carrega a barreira física esquerda da janela
-    lh  t2, 0(t2)
-    bge t4, t2, ML_FX_OK          # Verifica colisão com os limites da janela de exibição
-    mv  t4, t2                    # Fixa na borda se tentar sair da tela
-ML_FX_OK:
-    sh  t4, 0(t3)                 # Salva a nova posição X do Félix na memória
+    sh  t1, 0(t0)
     ret
 
-# ----------------------------------------------------------------------------------------------
-# MOVE_RIGHT: Movimentação para a Direita ('d')
-# ----------------------------------------------------------------------------------------------
+MOVE_LEFT_FELIX:
+    la  t3, CHAR_POS
+    lh  t4, 0(t3)
+    addi t4, t4, -2
+    la  t2, FELIX_X_MIN
+    lh  t2, 0(t2)
+    bge t4, t2, ML_FX_OK
+    mv  t4, t2
+ML_FX_OK:
+    sh  t4, 0(t3)
+    ret
+
 MOVE_RIGHT:
     la  t0, FELIX_DIR
     li  t1, 0
-    sw  t1, 0(t0)                 # Define a direção do Félix como 0 (Olhando para a Direita)
+    sw  t1, 0(t0)
 
-    la  t3, CHAR_POS              # Posição X do Félix
+    la  t3, CHAR_POS
     lh  t4, 0(t3)
-    li  t5, 274                   # Ponto limite de ativação do Scroll Direito
-    blt t4, t5, MOVE_RIGHT_FELIX  # Se o Félix estiver antes da coluna 274, move apenas o personagem
+    li  t5, 274
+    blt t4, t5, MOVE_RIGHT_FELIX
 
-    la  t0, BG_POS                # Posição X da Câmera
-    lh  t1, 0(t0)
-    la  t2, BG_X_MAX              # Limite máximo de scroll permitido
-    lh  t2, 0(t2)
-    beq t1, t2, MOVE_RIGHT_FELIX  # Se o fundo já chegou no limite máximo, move o Félix até o canto absoluto
-
-    # Efetua o Scroll: Desloca o fundo para a direita
-    addi t1, t1, 2                # Desloca a leitura do cenário em +2 pixels
-    ble t1, t2, MR_BG_OK          # Garante proteção contra estouro de limite máximo
-    mv  t1, t2                    # Fixa no limite se houver estouro
-MR_BG_OK:
-    sh  t1, 0(t0)                 # Grava o novo ponto de scroll do background
-    ret
-
-MOVE_RIGHT_FELIX:
-    la  t3, CHAR_POS              # Atualiza a posição X do Félix
-    lh  t4, 0(t3)
-    
-    la  t0, BG_POS                # Valida se o cenário de fundo está completamente estático no limite
+    la  t0, BG_POS
     lh  t1, 0(t0)
     la  t2, BG_X_MAX
     lh  t2, 0(t2)
-    beq t1, t2, MR_FX_LIMIT       # Se o fundo estiver no limite, permite andar até a borda da janela (304)
+    beq t1, t2, MOVE_RIGHT_FELIX
+
+    addi t1, t1, 2
+    ble t1, t2, MR_BG_OK
+    mv  t1, t2
+MR_BG_OK:
+    sh  t1, 0(t0)
+    ret
+
+MOVE_RIGHT_FELIX:
+    la  t3, CHAR_POS
+    lh  t4, 0(t3)
     
-    li  t5, 274                   # Mantém o travamento do Félix na linha 274 enquanto o cenário se move
-    blt t4, t5, MR_FX_CONTINUE    # Caso esteja abaixo de 274, avança normalmente
-    mv  t4, t5                    # Trava o Félix no ponto 274 para o efeito de câmera funcionar
+    la  t0, BG_POS
+    lh  t1, 0(t0)
+    la  t2, BG_X_MAX
+    lh  t2, 0(t2)
+    beq t1, t2, MR_FX_LIMIT
+    
+    li  t5, 274
+    blt t4, t5, MR_FX_CONTINUE
+    mv  t4, t5
     j MR_FX_OK
 
 MR_FX_LIMIT:
-    la  t2, FELIX_X_MAX           # Carrega a parede invisível da borda da tela
+    la  t2, FELIX_X_MAX
     lh  t2, 0(t2)
-    blt t4, t2, MR_FX_CONTINUE    # Avança livremente até atingir a colisão absoluta com o fim da janela
-    mv  t4, t2                    # Impede que o personagem saia do campo de visão do jogador
+    blt t4, t2, MR_FX_CONTINUE
+    mv  t4, t2
     j MR_FX_OK
 
 MR_FX_CONTINUE:
-    addi t4, t4, 2                # Aplica o deslocamento de +2 pixels no eixo horizontal
+    addi t4, t4, 2
 
 MR_FX_OK:
-    sh  t4, 0(t3)                 # Consolida a nova coordenada na memória
+    sh  t4, 0(t3)
     ret
 
-# ----------------------------------------------------------------------------------------------
-# MOVE_UP: Impulso Inicial de Pulo ('w')
-# Só aplica força para cima se o personagem estiver firmemente apoiado em alguma superfície.
-# ----------------------------------------------------------------------------------------------
 MOVE_UP:
     la  t0, ESTA_NO_AR
     lw  t1, 0(t0)
-    bnez t1, FIM_MOVE_UP          # Se já estiver no ar, ignora a nova entrada (evita pulo infinito)
+    bnez t1, FIM_MOVE_UP
 
-    li  t1, -8                    # Força do impulso para cima (velocidade vertical negativa)
+    li  t1, -8
     la  t2, VEL_Y
-    sw  t1, 0(t2)                 # Define VEL_Y = -8
+    sw  t1, 0(t2)
 
     li  t1, 1
-    sw  t1, 0(t0)                 # Altera o estado para ESTA_NO_AR = 1
+    sw  t1, 0(t0)
 FIM_MOVE_UP:
     ret
 
-# ----------------------------------------------------------------------------------------------
-# MOVE_DOWN: Agachar / Mover para Baixo ('s')
-# ----------------------------------------------------------------------------------------------
 MOVE_DOWN:
-    la  t0, CHAR_POS              # Carrega a estrutura de coordenadas
-    lh  t1, 2(t0)                 # Carrega a coordenada Y (linha)
-    addi t1, t1, 2                # Incrementa 2 pixels (move para baixo)
+    la  t0, CHAR_POS
+    lh  t1, 2(t0)
+    addi t1, t1, 2
 
-    la  t2, FELIX_Y_MAX           # Carrega o chão físico do jogo
+    la  t2, FELIX_Y_MAX
     lh  t2, 0(t2)
-    ble t1, t2, MD_OK             # Valida a colisão inferior
-    mv  t1, t2                    # Fixa o personagem no chão
+    ble t1, t2, MD_OK
+    mv  t1, t2
 MD_OK:
-    sh  t1, 2(t0)                 # Salva a nova coordenada Y
+    sh  t1, 2(t0)
     ret
 
-# ----------------------------------------------------------------------------------------------
-# APLICAR_GRAVIDADE: Executa o Cálculo de Queda e Verificação Cartesiana de Plataformas
-# Executada ciclicamente pelo Game Loop.
-# ----------------------------------------------------------------------------------------------
 APLICAR_GRAVIDADE:
     la  t0, CHAR_POS
-    lh  t1, 0(t0)                 # t1 = CHAR_POS.X
-    lh  t2, 2(t0)                 # t2 = CHAR_POS.Y
+    lh  t1, 0(t0)
+    lh  t2, 2(t0)
 
     la  t3, VEL_Y
-    lw  t4, 0(t3)                 # t4 = VEL_Y atual
+    lw  t4, 0(t3)
 
-    # 1. Aplica a velocidade atual na coordenada Y do personagem
-    add t2, t2, t4                # Novo Y = Y + VEL_Y
+    add t2, t2, t4
     
-    # 2. Incrementa a força da gravidade na velocidade para o próximo frame
-    addi t4, t4, 1                # Gravidade simples: acelera +1 pixel por frame para baixo
-    li  t5, 6                     # Limite máximo de velocidade de queda (Terminal Velocity)
+    addi t4, t4, 1
+    li  t5, 6
     ble t4, t5, SALVA_VEL
     mv  t4, t5
 SALVA_VEL:
-    sw  t4, 0(t3)                 # Grava a velocidade atualizada de volta na memória
+    sw  t4, 0(t3)
 
-    # 3. Mapeamento Cartesiano de Blocos/Chão
-    # Bloco Metade Esquerda: Ativo quando X está entre 0 e 160 (Metade de 320)
     li  t5, 160
-    bgt t1, t5, VERIFICA_FIM_TELA # Se X > 160, está na metade direita (sem bloco), testa queda livre
+    bgt t1, t5, VERIFICA_FIM_TELA
 
-    # Se está na esquerda, o bloco se comporta como chão firme a partir da linha Y = 120
     li  t6, 120
-    bge t2, t6, COLISAO_BLOCO     # Se a queda ultrapassou ou igualou a linha do bloco, colide aqui
+    bge t2, t6, COLISAO_BLOCO
     j   VALIDA_LIMITES_JANELA
 
 COLISAO_BLOCO:
-    mv  t2, t6                    # Trunca a posição vertical exatamente no topo do bloco (Y = 120)
+    mv  t2, t6
     li  t4, 0
-    sw  t4, 0(t3)                 # Zera a velocidade vertical (parou de cair)
+    sw  t4, 0(t3)
     la  t4, ESTA_NO_AR
-    sw  zero, 0(t4)               # Define ESTA_NO_AR = 0 (Está pisando em solo firme)
+    sw  zero, 0(t4)
     j   VALIDA_LIMITES_JANELA
 
 VERIFICA_FIM_TELA:
-    # Caso esteja na metade direita (X > 160), o único limite inferior é a base total da tela
     la  t5, FELIX_Y_MAX
-    lh  t5, 0(t5)                 # t5 = 224 (Limite inferior absoluto)
-    blt t2, t5, MARCA_NO_AR       # Se estiver acima de 224, continua caindo em queda livre
-    mv  t2, t5                    # Se ultrapassar, fixa no chão absoluto da tela
+    lh  t5, 0(t5)
+    blt t2, t5, MARCA_NO_AR
+    mv  t2, t5
     li  t4, 0
-    sw  t4, 0(t3)                 # Zera a velocidade vertical
+    sw  t4, 0(t3)
     la  t4, ESTA_NO_AR
-    sw  zero, 0(t4)               # Zera indicador de ar
+    sw  zero, 0(t4)
     j   VALIDA_LIMITES_JANELA
 
 MARCA_NO_AR:
     li  t4, 1
     la  t5, ESTA_NO_AR
-    sw  t4, 0(t5)                 # Força o estado a continuar no ar se caiu da plataforma
+    sw  t4, 0(t5)
 
 VALIDA_LIMITES_JANELA:
-    # Garante que o t2 (Y) respeite as bordas físicas superiores antes de consolidar na memória
     la  t5, FELIX_Y_MIN
     lh  t5, 0(t5)
     bge t2, t5, Y_MIN_OK
-    mv  t2, t5                    # Trava no teto físico se a força do pulo for muito alta
+    mv  t2, t5
     la  t4, VEL_Y
-    sw  zero, 0(t4)               # Zera a velocidade para começar a descer imediatamente
+    sw  zero, 0(t4)
 Y_MIN_OK:
-    sh  t2, 2(t0)                 # Grava a coordenada vertical final tratada de volta no Félix
+    sh  t2, 2(t0)
     ret
 
-# ----------------------------------------------------------------------------------------------
-# SELECT_FELIX: Máquina de Estados de Sprite / Animação Contínua
-# ----------------------------------------------------------------------------------------------
 SELECT_FELIX:
-    la  t0, FELIX_DIR             # Carrega a orientação atual do personagem
+    la  t0, FELIX_DIR
     lw  t0, 0(t0)
-    beq t0, zero, FELIX_RIGHT     # Se 0, executa lógica de animação voltada para a direita
+    beq t0, zero, FELIX_RIGHT
     li  t1, 1
-    beq t0, t1, FELIX_LEFT        # Se 1, executa lógica de animação voltada para a esquerda
+    beq t0, t1, FELIX_LEFT
 
 FELIX_RIGHT:
-    la  t2, FELIX_FRAME           # Pega o contador de ticks
+    la  t2, FELIX_FRAME
     lw  t0, 0(t2)
-    srli t0, t0, 2                # Divisor de frequência de animação (reduz a velocidade dividindo por 4)
-    andi t0, t0, 1                # Isola o bit para alternância binária pura (0 ou 1)
-    bnez t0, NOT_REBAIXADO        # Se o resultado for 1, renderiza o sprite normal em pé
-    la   a0, FelixRebaixado       # Se o resultado for 0, renderiza o sprite agachado ("passo")
+    srli t0, t0, 2
+    andi t0, t0, 1
+    bnez t0, NOT_REBAIXADO
+    la   a0, FelixRebaixado
     ret
 NOT_REBAIXADO:
-    la   a0, felix                # Retorna o sprite padrão ativo em a0
+    la   a0, felix
     ret
 
 FELIX_LEFT:
-    la  t2, FELIX_FRAME           # Lógica análoga à anterior, aplicada à orientação esquerda
+    la  t2, FELIX_FRAME
     lw  t0, 0(t2)
-    srli t0, t0, 2                # Desloca 2 bits para desacelerar a transição dos sprites
-    andi t0, t0, 1                # Cria o padrão intermitente estável de oscilação
+    srli t0, t0, 2
+    andi t0, t0, 1
     bnez t0, NOT_REBAIXADO_LEFT
-    la   a0, FelixOutroLadoRebaixado # Retorna o sprite agachado olhando para a esquerda
+    la   a0, FelixOutroLadoRebaixado
     ret
 NOT_REBAIXADO_LEFT:
-    la   a0, FelixOutroLado           # Retorna o sprite normal olhando para a esquerda
+    la   a0, FelixOutroLado
     ret
 
-# ----------------------------------------------------------------------------------------------
-# PRINT: Renderizador Gráfico Padrão (Bitmaps Gerais)
-# ----------------------------------------------------------------------------------------------
 PRINT:
-    li  t0, 0xFF0                 # Base do endereço do Frame Buffer do simulador Risc-V
-    add t0, t0, a3                # Soma o indicador do frame selecionado (a3: 0 ou 1)
-    slli t0, t0, 20               # Desloca 20 bits para alinhar com o endereço real de vídeo (0xFF000000 / 0xFF100000)
-    add t0, t0, a1                # Soma a coordenada horizontal X (coluna inicial)
-    li  t1, 320                   # Constante de largura total da janela VGA
-    mul t1, t1, a2                # Multiplica a linha atual pela largura total da tela
-    add t0, t0, t1                # Define o ponto exato da memória bitmap de destino
-    addi t1, a0, 8                # Ignora os metadados (primeiros 8 bytes contendo largura e altura)
-    mv  t2, zero                  # Zera o registrador do contador de linhas (Y interno)
-    mv  t3, zero                  # Zera o registrador do contador de colunas (X interno)
-    lw  t4, 0(a0)                 # Extrai a largura da imagem do arquivo .data
-    lw  t5, 4(a0)                 # Extrai a altura da imagem do arquivo .data
+    li  t0, 0xFF0
+    add t0, t0, a3
+    slli t0, t0, 20
+    add t0, t0, a1
+    li  t1, 320
+    mul t1, t1, a2
+    add t0, t0, t1
+    addi t1, a0, 8
+    mv  t2, zero
+    mv  t3, zero
+    lw  t4, 0(a0)
+    lw  t5, 4(a0)
 PRINT_LINHA:
-    lw  t6, 0(t1)                 # Lê uma palavra (4 pixels consecutivos embalados) da imagem
-    sw  t6, 0(t0)                 # Copia os 4 pixels diretamente para a memória de vídeo (Bitmap Display)
-    addi t0, t0, 4                # Avança 4 bytes no buffer de tela
-    addi t1, t1, 4                # Avança 4 bytes na memória da imagem
-    addi t3, t3, 4                # Incrementa o rastreador de colunas
-    blt  t3, t4, PRINT_LINHA      # Repete até que toda a largura da linha atual seja preenchida
-    addi t0, t0, 320              # Move o ponteiro de tela para o início da próxima linha física
-    sub  t0, t0, t4               # Ajusta o recuo necessário subtraindo a largura recém impressa
-    mv  t3, zero                  # Reinicia o contador horizontal para a nova linha
-    addi t2, t2, 1                # Incrementa o contador de linhas verticais processadas
-    blt  t2, t5, PRINT_LINHA      # Loop contínuo até que toda a altura do sprite termine de desenhar
+    lw  t6, 0(t1)
+    sw  t6, 0(t0)
+    addi t0, t0, 4
+    addi t1, t1, 4
+    addi t3, t3, 4
+    blt  t3, t4, PRINT_LINHA
+    addi t0, t0, 320
+    sub  t0, t0, t4
+    mv  t3, zero
+    addi t2, t2, 1
+    blt  t2, t5, PRINT_LINHA
     ret
 
-# ----------------------------------------------------------------------------------------------
-# PRINT_BACKGROUND: Renderizador Especial com Suporte a Câmera Horizonal (Scroll)
-# ----------------------------------------------------------------------------------------------
 PRINT_BACKGROUND:
-    li   t0, 0xFF0                # Configuração do endereço de memória de vídeo base
-    add  t0, t0, a3                # Aplica o Double Buffering dinamicamente (0 ou 1)
-    slli t0, t0, 20               # Desloca para formar o endereço canônico (0xFF000000 / 0xFF100000)
-    addi t1, a0, 8                # Avança os metadados iniciais da imagem (largura/altura)
-    lw   t4, 0(a0)                # t4 = Largura real total da imagem do cenário completo
-    add  t1, t1, a1               # Soma o factor X de Scroll (a1), deslocando o ponteiro de leitura do mapa
-    li   t2, 0                    # Contador de linhas do visor (começa na linha 0)
-    li   t5, 240                  # Limita a exibição vertical estritamente à altura padrão da tela (240)
+    li   t0, 0xFF0
+    add  t0, t0, a3
+    slli t0, t0, 20
+    addi t1, a0, 8
+    lw   t4, 0(a0)
+    add  t1, t1, a1
+    li   t2, 0
+    li   t5, 240
 PRINT_BG_LINHA:
-    li   t3, 0                    # Inicializa o rastreador de colunas do monitor para a nova linha
+    li   t3, 0
 PRINT_BG_COLUNA:
-    lw   t6, 0(t1)                # Captura 4 pixels sequenciais a partir do ponto de visualização da câmera
-    sw   t6, 0(t0)                # Escreve os pixels capturados no monitor físico
-    addi t0, t0, 4                # Move o cursor de escrita do monitor adiante
-    addi t1, t1, 4                # Move o cursor de leitura do cenário adiante
-    addi t3, t3, 4                # Incrementa o preenchimento horizontal atual
-    li   t6, 320                  # Força a parada ao preencher a janela VGA visível completa (320)
-    blt  t3, t6, PRINT_BG_COLUNA  # Continua preenchendo as colunas da linha se estiver abaixo de 320
-    sub  t1, t1, t3               # Retrocede o ponteiro de dados ao início da janela visível da linha
-    add  t1, t1, t4               # Salta o restante oculto da largura do mapa real para alinhar com a próxima linha
-    addi t2, t2, 1                # Avança para a próxima linha do monitor
-    blt  t2, t5, PRINT_BG_LINHA   # Finaliza ao preencher todas as 240 linhas verticais da tela do jogo
+    lw   t6, 0(t1)
+    sw   t6, 0(t0)
+    addi t0, t0, 4
+    addi t1, t1, 4
+    addi t3, t3, 4
+    li   t6, 320
+    blt  t3, t6, PRINT_BG_COLUNA
+    sub  t1, t1, t3
+    add  t1, t1, t4
+    addi t2, t2, 1
+    blt  t2, t5, PRINT_BG_LINHA
     ret
