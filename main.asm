@@ -3,7 +3,8 @@
 .include "imagens/megaman_direita.data"
 .include "imagens/fundo.data"
 .include "imagens/tile.data"
-.include "imagens/telainicial.data"
+.include "imagens/tela_inicial1.data"
+.include "imagens/tela_inicial2.data"
 .include "imagens/megaman_correndo_direita1.data"
 .include "imagens/megaman_correndo_direita2.data"
 .include "imagens/megaman_correndo_direita3.data"
@@ -88,23 +89,51 @@ LISTA_BLOCOS:
 .text
 
 SETUP:
-    la  a0, telainicial
+    la  a0, tela_inicial1
     li  a1, 0          
     li  a2, 0          
     li  a3, 0          
     call PRINT         
 
+    li  s11, 0         
+
 KEY1:
-    li  t1, 0xFF200000 
+    li  s10, 0xFF200000 
 WAIT_KEY:
-    li  a0, 10
+    li  a0, 5
     li  a7, 32
     ecall
-    lw  t0, 0(t1)      
+
+    li  a7, 30
+    ecall
+    srli t2, a0, 9
+    andi t2, t2, 1
+    beq t2, s11, CHECK_KEY_INPUT
+
+    mv  s11, t2
+    bnez t2, MOSTRA_TELA2
+
+MOSTRA_TELA1:
+    la  a0, tela_inicial1
+    li  a1, 0          
+    li  a2, 0          
+    li  a3, 0          
+    call PRINT         
+    j CHECK_KEY_INPUT
+
+MOSTRA_TELA2:
+    la  a0, tela_inicial2
+    li  a1, 0          
+    li  a2, 0          
+    li  a3, 0          
+    call PRINT         
+
+CHECK_KEY_INPUT:
+    lw  t0, 0(s10)      
     andi t0, t0, 0x0001
     beq t0, zero, WAIT_KEY 
-    lw  t2, 4(t1)      
-    sw  t2, 12(t1)     
+    lw  t2, 4(s10)      
+    sw  t2, 12(s10)     
 
     la  a0, fundo     
     lh  a1, 0(a0)     
@@ -683,10 +712,26 @@ SELECT_FELIX:
     beq t0, zero, PARADO_RIGHT
     
 PARADO_LEFT:
+    la  t2, FELIX_FRAME
+    lw  t0, 0(t2)      
+    srli t0, t0, 3     
+    andi t0, t0, 1     
+    bnez t0, NOT_REBAIXADO_LEFT
+    la   a0, megaman_piscando_esquerda 
+    ret
+NOT_REBAIXADO_LEFT:
     la   a0, megaman_esquerda 
     ret
 
 PARADO_RIGHT:
+    la  t2, FELIX_FRAME
+    lw  t0, 0(t2)      
+    srli t0, t0, 3     
+    andi t0, t0, 1     
+    bnez t0, NOT_REBAIXADO 
+    la   a0, megaman_piscando_direita 
+    ret
+NOT_REBAIXADO:
     la   a0, megaman_direita     
     ret
 
