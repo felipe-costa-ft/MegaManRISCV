@@ -1,5 +1,6 @@
 .data
 
+
 .include "imagens/megaman_direita.data"
 .include "imagens/fundo.data"
 .include "imagens/tile.data"
@@ -13,6 +14,9 @@
 .include "imagens/megaman_esquerda.data"
 .include "imagens/megaman_piscando_esquerda.data"
 .include "imagens/megaman_piscando_direita.data"
+.include "imagens/megaman_pulando_direita.data"
+.include "imagens/megaman_pulando_esquerda.data"
+
 
 notas: .word 9, 0, 0, 67, 1000, 0, 74, 1000, 0, 70, 1500, 0, 69, 500, 0, 67, 500, 0, 70, 500, 0, 69, 500, 0, 67, 500, 0, 66, 500, 0,
 
@@ -652,6 +656,10 @@ FIM_LAT:
     ret
 
 SELECT_FELIX:
+    la  t0, ESTA_NO_AR
+    lw  t1, 0(t0)
+    bnez t1, ANIMAR_PULO
+
     la  t0, ESTA_MOVENDO
     lw  t1, 0(t0)
     bnez t1, ANIMAR_ANDANDO
@@ -661,26 +669,10 @@ SELECT_FELIX:
     beq t0, zero, PARADO_RIGHT
     
 PARADO_LEFT:
-    la  t2, FELIX_FRAME
-    lw  t0, 0(t2)      
-    srli t0, t0, 3     
-    andi t0, t0, 1     
-    bnez t0, NOT_REBAIXADO_LEFT
-    la   a0, megaman_piscando_esquerda 
-    ret
-NOT_REBAIXADO_LEFT:
     la   a0, megaman_esquerda 
     ret
 
 PARADO_RIGHT:
-    la  t2, FELIX_FRAME
-    lw  t0, 0(t2)      
-    srli t0, t0, 3     
-    andi t0, t0, 1     
-    bnez t0, NOT_REBAIXADO 
-    la   a0, megaman_piscando_direita 
-    ret
-NOT_REBAIXADO:
     la   a0, megaman_direita     
     ret
 
@@ -729,6 +721,17 @@ RUN_R2:
     ret
 RUN_R3:
     la  a0, megaman_correndo_direita3
+    ret
+
+ANIMAR_PULO:
+    la  t0, FELIX_DIR
+    lw  t0, 0(t0)
+    beq t0, zero, PULO_RIGHT
+PULO_LEFT:
+    la  a0, megaman_pulando_esquerda
+    ret
+PULO_RIGHT:
+    la  a0, megaman_pulando_direita
     ret
 
 PRINT:
