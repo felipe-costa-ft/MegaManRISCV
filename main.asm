@@ -1,6 +1,5 @@
 .data
 
-
 .include "imagens/megaman_direita.data"
 .include "imagens/fundo.data"
 .include "imagens/tile.data"
@@ -16,7 +15,8 @@
 .include "imagens/megaman_piscando_direita.data"
 .include "imagens/megaman_pulando_direita.data"
 .include "imagens/megaman_pulando_esquerda.data"
-
+.include "imagens/megaman_subindo_escada_1.data"
+.include "imagens/megaman_subindo_escada_2.data"
 
 notas: .word 9, 0, 0, 67, 1000, 0, 74, 1000, 0, 70, 1500, 0, 69, 500, 0, 67, 500, 0, 70, 500, 0, 69, 500, 0, 67, 500, 0, 66, 500, 0,
 
@@ -53,7 +53,7 @@ LISTA_ESCADAS:
     .half 1688, 1692, 192, 380
 
 
-NUM_BLOCOS:   .word 22
+NUM_BLOCOS:   .word 25
 LISTA_BLOCOS:
     .half 12, 1200, 194, 326
     .half 196, 265, 178, 192
@@ -80,6 +80,10 @@ LISTA_BLOCOS:
     .half 1897, 1945, 128, 429
 
     .half 1377, 1380, 329, 412
+
+    .half 1708, 1777, 191, 250
+    .half 1792, 1861, 159, 250
+    .half 1876, 1944, 129, 250
 
 .text
 
@@ -353,6 +357,9 @@ MR_FX_OK:
     ret
 
 MOVE_UP:
+    li  t4, 1
+    la  t3, ESTA_MOVENDO
+    sw  t4, 0(t3)
     la  t0, ESTA_NA_ESCADA
     lw  t1, 0(t0)
     beqz t1, JUMP_LOGIC
@@ -393,6 +400,9 @@ FIM_MOVE_UP:
     ret
 
 MOVE_DOWN:
+    li  t4, 1
+    la  t3, ESTA_MOVENDO
+    sw  t4, 0(t3)
     la  t0, ESTA_NA_ESCADA
     lw  t1, 0(t0)
     beqz t1, NORMAL_DOWN
@@ -656,6 +666,10 @@ FIM_LAT:
     ret
 
 SELECT_FELIX:
+    la  t0, ESTA_NA_ESCADA
+    lw  t1, 0(t0)
+    bnez t1, ANIMAR_ESCADA
+
     la  t0, ESTA_NO_AR
     lw  t1, 0(t0)
     bnez t1, ANIMAR_PULO
@@ -732,6 +746,25 @@ PULO_LEFT:
     ret
 PULO_RIGHT:
     la  a0, megaman_pulando_direita
+    ret
+
+ANIMAR_ESCADA:
+    la  t0, ESTA_MOVENDO
+    lw  t1, 0(t0)
+    beqz t1, ESCADA_PARADO
+    la  t2, FELIX_FRAME
+    lw  t0, 0(t2)
+    srli t0, t0, 3
+    andi t0, t0, 1
+    bnez t0, ESCADA_LADO2
+ESCADA_LADO1:
+    la  a0, megaman_subindo_escada_1
+    ret
+ESCADA_LADO2:
+    la  a0, megaman_subindo_escada_2
+    ret
+ESCADA_PARADO:
+    la  a0, megaman_subindo_escada_1
     ret
 
 PRINT:
