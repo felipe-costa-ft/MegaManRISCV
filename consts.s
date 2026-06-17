@@ -1,0 +1,45 @@
+# ===========================================================================
+# PLAYER STATE
+# ===========================================================================
+
+.eqv STATE_IDLE          0
+.eqv STATE_ANDANDO       1
+.eqv STATE_NO_AR         2
+.eqv STATE_ATIRANDO      3
+.eqv STATE_ATIRA_PULANDO 4
+.eqv STATE_NA_ESCADA     5
+.eqv STATE_ATIRA_ESCADA  6
+.eqv STATE_KNOCKBACK     7
+
+PLAYER_STATE:          .word STATE_IDLE
+
+ESTA_INVULNERAVEL:      .word 0
+INVULNERAVEL_TIMER:      .word 0
+INVULNERAVEL_DURACAO:    .word 2000   # 2s piscando após o dano
+
+KNOCKBACK_TIMER:         .word 0
+KNOCKBACK_DURACAO:       .word 350    # 350ms travado, sendo empurrado
+KNOCKBACK_VEL_X:         .word 0
+
+
+# ===========================================================================
+# PLAYER ATTR
+# ===========================================================================
+
+.eqv PLAYER_LARGURA 24
+.eqv PLAYER_ALTURA  24
+
+.eqv PLAYER_X_MIN 0
+.eqv PLAYER_X_MAX 296
+.eqv PLAYER_Y_MIN 0
+.eqv PLAYER_Y_MAX 216
+
+
+# ===========================================================================
+# MAPA
+# ===========================================================================
+
+.eqv BG_X_MIN  0
+.eqv BG_X_MAX  192
+.eqv BG_Y_MIN  0
+.eqv BG_Y_MAX  0

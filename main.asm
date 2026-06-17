@@ -1,5 +1,8 @@
 .data
 
+.include "consts.s"
+
+
 .include "imagens/MAPA1_defs.s"
 .include "imagens/MAPA1_colisao.s"
 .include "imagens/MAPA1_visual.s"
@@ -27,29 +30,20 @@ notas: .word 9, 0, 0, 67, 1000, 0, 74, 1000, 0, 70, 1500, 0, 69, 500, 0, 67, 500
 CHAR_POS:     .half 16, 168
 OLD_CHAR_POS: .half 16, 168
 
-FELIX_LARGURA: .half 24
-FELIX_ALTURA:  .half 24
-
 BG_POS:     .half 0, 0
 OLD_BG_POS: .half 0, 0
 
-BG_X_MIN:  .half 0
-BG_X_MAX:  .half 192
-BG_Y_MIN:  .half 0
-BG_Y_MAX:  .half 0
-
-FELIX_X_MIN: .half 0
-FELIX_X_MAX: .half 296
-FELIX_Y_MIN: .half 0
-FELIX_Y_MAX: .half 216
-
-FELIX_DIR:    .word 1
-FELIX_FRAME:  .word 0
+PLAYER_DIR:    .word 1
+PLAYER_FRAME:  .word 0
 ESTA_MOVENDO: .word 0
 
 VEL_Y:          .word 0
 ESTA_NO_AR:     .word 0
 ESTA_NA_ESCADA: .word 0
+
+ULTIMA_TECLA:        .word 0
+ULTIMA_TECLA_TEMPO:   .word 0
+TECLA_TIMEOUT:        .word 150   # ms: se nenhuma tecla nova chegar nesse intervalo, considera solta
 
 
 .text
@@ -107,6 +101,10 @@ CHECK_KEY_INPUT:
     call PRINT_MAPA
 
 GAME_LOOP:
+    li  a7, 30
+    ecall
+    mv  s9, a0          # s9 = tempo de inicio desta iteracao (fixed timestep ~60fps)
+
     la  t0, CHAR_POS
     la  t1, OLD_CHAR_POS
     lh  t2, 0(t0)
@@ -146,7 +144,7 @@ MF1:
     lw  a1, 4(s5)
     li  a2, 0
     li  a3, 60
-    ecall
+    # ecall
     li  a7, 30
     ecall
     sw  a0, 8(s1)
@@ -154,7 +152,7 @@ MF1:
     sw  s3, 4(s1)
 
 MF0:
-    la  t0, FELIX_FRAME
+    la  t0, PLAYER_FRAME
     lw  t1, 0(t0)
     addi t1, t1, 1
     sw  t1, 0(t0)
@@ -163,7 +161,7 @@ MF0:
     call KEY2
     call APLICAR_GRAVIDADE
     call PROCESSAR_COLISOES_LATERAIS
-    call SELECT_FELIX
+    call SELECT_PLAYER
 
     xori s0, s0, 1
     la  t0, CHAR_POS
@@ -179,9 +177,17 @@ MF0:
     xori a3, a3, 1
     call PRINT_MAPA
 
-    li a0, 30
-    li a7, 32
+    li  a7, 30
     ecall
+    sub  t0, a0, s9      # t0 = duracao real desta iteracao em ms
+    li  t1, 16            # alvo: ~60 FPS (16ms por frame)
+    sub  t1, t1, t0
+    bltz t1, GL_NO_SLEEP  # se a iteracao ja levou 16ms ou mais, nao dorme
+
+    mv  a0, t1
+    li  a7, 32
+    ecall
+GL_NO_SLEEP:
     j GAME_LOOP
 
 CHECAR_ESCADA:
@@ -193,19 +199,29 @@ KEY2:
     li  t1, 0xFF200000
     lw  t0, 0(t1)
     andi t0, t0, 0x0001
-    beq  t0, zero, KEY2_CHECAR_AR
+    beq  t0, zero, KEY2_SEM_TECLA_NOVA
+
     lw  t2, 4(t1)
-    j    KEY2_PROCESSA
-KEY2_CHECAR_AR:
-    la  t0, ESTA_NA_ESCADA
-    lw  t3, 0(t0)
-    bnez t3, KEY2_CONTINUO
-    la  t0, ESTA_NO_AR
-    lw  t3, 0(t0)
-    bnez t3, KEY2_CONTINUO
-    j    KEY2_FIM
-KEY2_CONTINUO:
-    lw  t2, 4(t1)
+    la  t3, ULTIMA_TECLA
+    sw  t2, 0(t3)
+    li  a7, 30
+    ecall
+    la  t3, ULTIMA_TECLA_TEMPO
+    sw  a0, 0(t3)
+    j   KEY2_PROCESSA
+
+KEY2_SEM_TECLA_NOVA:
+    li  a7, 30
+    ecall
+    la  t3, ULTIMA_TECLA_TEMPO
+    lw  t4, 0(t3)
+    sub t5, a0, t4
+    la  t6, TECLA_TIMEOUT
+    lw  t6, 0(t6)
+    bge t5, t6, KEY2_FIM   # passou do timeout: considera tecla solta, nao move
+
+    la  t3, ULTIMA_TECLA
+    lw  t2, 0(t3)
 KEY2_PROCESSA:
     li  t0, 'a'
     beq t2, t0, MOVE_LEFT
@@ -222,30 +238,28 @@ MOVE_LEFT:
     li  t4, 1
     la  t3, ESTA_MOVENDO
     sw  t4, 0(t3)
-    la  t0, FELIX_DIR
+    la  t0, PLAYER_DIR
     li  t1, 1
     sw  t1, 0(t0)
     la  t0, BG_POS
     lh  t1, 0(t0)
-    la  t2, BG_X_MIN
-    lh  t2, 0(t2)
-    beq t1, t2, MOVE_LEFT_FELIX
+    li  t2, BG_X_MIN
+    beq t1, t2, MOVE_LEFT_PLAYER
     la  t3, CHAR_POS
     lh  t4, 0(t3)
     li  t5, 30
-    bgt t4, t5, MOVE_LEFT_FELIX
+    bgt t4, t5, MOVE_LEFT_PLAYER
     addi t1, t1, -2
     bge t1, t2, ML_BG_OK
     mv  t1, t2
 ML_BG_OK:
     sh  t1, 0(t0)
     ret
-MOVE_LEFT_FELIX:
+MOVE_LEFT_PLAYER:
     la  t3, CHAR_POS
     lh  t4, 0(t3)
     addi t4, t4, -2
-    la  t2, FELIX_X_MIN
-    lh  t2, 0(t2)
+    li  t2, PLAYER_X_MIN
     bge t4, t2, ML_FX_OK
     mv  t4, t2
 ML_FX_OK:
@@ -256,39 +270,36 @@ MOVE_RIGHT:
     li  t4, 1
     la  t3, ESTA_MOVENDO
     sw  t4, 0(t3)
-    la  t0, FELIX_DIR
+    la  t0, PLAYER_DIR
     li  t1, 0
     sw  t1, 0(t0)
     la  t3, CHAR_POS
     lh  t4, 0(t3)
     li  t5, 274
-    blt t4, t5, MOVE_RIGHT_FELIX
+    blt t4, t5, MOVE_RIGHT_PLAYER
     la  t0, BG_POS
     lh  t1, 0(t0)
-    la  t2, BG_X_MAX
-    lh  t2, 0(t2)
-    beq t1, t2, MOVE_RIGHT_FELIX
+    li  t2, BG_X_MAX
+    beq t1, t2, MOVE_RIGHT_PLAYER
     addi t1, t1, 2
     ble t1, t2, MR_BG_OK
     mv  t1, t2
 MR_BG_OK:
     sh  t1, 0(t0)
     ret
-MOVE_RIGHT_FELIX:
+MOVE_RIGHT_PLAYER:
     la  t3, CHAR_POS
     lh  t4, 0(t3)
     la  t0, BG_POS
     lh  t1, 0(t0)
-    la  t2, BG_X_MAX
-    lh  t2, 0(t2)
+    li  t2, BG_X_MAX
     beq t1, t2, MR_FX_LIMIT
     li  t5, 274
     blt t4, t5, MR_FX_CONTINUE
     mv  t4, t5
     j MR_FX_OK
 MR_FX_LIMIT:
-    la  t2, FELIX_X_MAX
-    lh  t2, 0(t2)
+    li  t2, PLAYER_X_MAX
     blt t4, t2, MR_FX_CONTINUE
     mv  t4, t2
     j MR_FX_OK
@@ -308,22 +319,20 @@ MOVE_UP:
     la  t0, CHAR_POS
     lh  t1, 2(t0)
     li  t5, 40
-    bgt t1, t5, MOVE_UP_FELIX_ESCADA
+    bgt t1, t5, MOVE_UP_PLAYER_ESCADA
     la  t2, BG_POS
     lh  t3, 2(t2)
-    la  t4, BG_Y_MIN
-    lh  t4, 0(t4)
-    beq t3, t4, MOVE_UP_FELIX_ESCADA
+    li  t4, BG_Y_MIN
+    beq t3, t4, MOVE_UP_PLAYER_ESCADA
     addi t3, t3, -2
     bge t3, t4, MU_BG_OK
     mv  t3, t4
 MU_BG_OK:
     sh  t3, 2(t2)
     ret
-MOVE_UP_FELIX_ESCADA:
+MOVE_UP_PLAYER_ESCADA:
     addi t1, t1, -2
-    la  t2, FELIX_Y_MIN
-    lh  t2, 0(t2)
+    li  t2, PLAYER_Y_MIN
     bge t1, t2, MU_FX_OK
     mv  t1, t2
 MU_FX_OK:
@@ -351,22 +360,20 @@ MOVE_DOWN:
     la  t0, CHAR_POS
     lh  t1, 2(t0)
     li  t5, 180
-    blt t1, t5, MOVE_DOWN_FELIX_ESCADA
+    blt t1, t5, MOVE_DOWN_PLAYER_ESCADA
     la  t2, BG_POS
     lh  t3, 2(t2)
-    la  t4, BG_Y_MAX
-    lh  t4, 0(t4)
-    beq t3, t4, MOVE_DOWN_FELIX_ESCADA
+    li  t4, BG_Y_MAX
+    beq t3, t4, MOVE_DOWN_PLAYER_ESCADA
     addi t3, t3, 2
     ble t3, t4, MD_ESCADA_BG_OK
     mv  t3, t4
 MD_ESCADA_BG_OK:
     sh  t3, 2(t2)
     ret
-MOVE_DOWN_FELIX_ESCADA:
+MOVE_DOWN_PLAYER_ESCADA:
     addi t1, t1, 2
-    la  t2, FELIX_Y_MAX
-    lh  t2, 0(t2)
+    li  t2, PLAYER_Y_MAX
     ble t1, t2, MD_ESCADA_FX_OK
     mv  t1, t2
 MD_ESCADA_FX_OK:
@@ -376,22 +383,20 @@ NORMAL_DOWN:
     la  t0, CHAR_POS
     lh  t1, 2(t0)
     li  t5, 180
-    blt t1, t5, MOVE_DOWN_FELIX
+    blt t1, t5, MOVE_DOWN_PLAYER
     la  t2, BG_POS
     lh  t3, 2(t2)
-    la  t4, BG_Y_MAX
-    lh  t4, 0(t4)
-    beq t3, t4, MOVE_DOWN_FELIX
+    li  t4, BG_Y_MAX
+    beq t3, t4, MOVE_DOWN_PLAYER
     addi t3, t3, 2
     ble t3, t4, MD_BG_OK
     mv  t3, t4
 MD_BG_OK:
     sh  t3, 2(t2)
     ret
-MOVE_DOWN_FELIX:
+MOVE_DOWN_PLAYER:
     addi t1, t1, 2
-    la  t2, FELIX_Y_MAX
-    lh  t2, 0(t2)
+    li  t2, PLAYER_Y_MAX
     ble t1, t2, MD_OK
     mv  t1, t2
 MD_OK:
@@ -413,10 +418,8 @@ GRAVIDADE_NORMAL:
     lh  s1, 0(t0)       # s1 = char_x (tela)
     lh  s2, 2(t0)       # s2 = char_y (tela)
 
-    la  s3, FELIX_LARGURA
-    lh  s3, 0(s3)
-    la  s4, FELIX_ALTURA
-    lh  s4, 0(s4)
+    li  s3, PLAYER_LARGURA
+    li  s4, PLAYER_ALTURA
 
     la  t3, VEL_Y
     lw  s5, 0(t3)
@@ -430,8 +433,7 @@ GRAV_ZERO_TOP:
     la  t0, VEL_Y
     sw  zero, 0(t0)
 GRAV_YMAX_CHK:
-    la  t0, FELIX_Y_MAX
-    lh  t0, 0(t0)
+    li  t0, PLAYER_Y_MAX
     ble s2, t0, GRAV_YMAX_OK
     mv  s2, t0
     la  t0, VEL_Y
@@ -518,10 +520,8 @@ PROCESSAR_COLISOES_LATERAIS:
     lh  s1, 0(t0)       # s1 = char_x
     lh  s2, 2(t0)       # s2 = char_y
 
-    la  s3, FELIX_LARGURA
-    lh  s3, 0(s3)
-    la  s4, FELIX_ALTURA
-    lh  s4, 0(s4)
+    li  s3, PLAYER_LARGURA
+    li  s4, PLAYER_ALTURA
 
     mv   a0, s1
     srli s7, s4, 1
@@ -564,13 +564,11 @@ COL_DIR:
     sub  s1, s5, s3
 
 COL_CLAMP:
-    la  t0, FELIX_X_MIN
-    lh  t0, 0(t0)
+    li  t0, PLAYER_X_MIN
     bge s1, t0, COL_XMAX
     mv  s1, t0
 COL_XMAX:
-    la  t0, FELIX_X_MAX
-    lh  t0, 0(t0)
+    li  t0, PLAYER_X_MAX
     ble s1, t0, COL_SAVE
     mv  s1, t0
 COL_SAVE:
@@ -580,7 +578,7 @@ COL_SAVE:
     addi sp, sp, 4
     ret
 
-SELECT_FELIX:
+SELECT_PLAYER:
     la  t0, ESTA_NA_ESCADA
     lw  t1, 0(t0)
     bnez t1, ANIMAR_ESCADA
@@ -593,12 +591,12 @@ SELECT_FELIX:
     lw  t1, 0(t0)
     bnez t1, ANIMAR_ANDANDO
 
-    la  t0, FELIX_DIR
+    la  t0, PLAYER_DIR
     lw  t0, 0(t0)
     beq t0, zero, PARADO_RIGHT
 
 PARADO_LEFT:
-    la  t2, FELIX_FRAME
+    la  t2, PLAYER_FRAME
     lw  t0, 0(t2)
     srli t0, t0, 3
     andi t0, t0, 1
@@ -610,7 +608,7 @@ NOT_REBAIXADO_LEFT:
     ret
 
 PARADO_RIGHT:
-    la  t2, FELIX_FRAME
+    la  t2, PLAYER_FRAME
     lw  t0, 0(t2)
     srli t0, t0, 3
     andi t0, t0, 1
@@ -622,12 +620,12 @@ NOT_REBAIXADO:
     ret
 
 ANIMAR_ANDANDO:
-    la  t0, FELIX_DIR
+    la  t0, PLAYER_DIR
     lw  t0, 0(t0)
     beq t0, zero, ANDANDO_RIGHT
 
 ANDANDO_LEFT:
-    la  t2, FELIX_FRAME
+    la  t2, PLAYER_FRAME
     lw  t0, 0(t2)
     srli t0, t0, 2
     li  t1, 3
@@ -648,7 +646,7 @@ RUN_L3:
     ret
 
 ANDANDO_RIGHT:
-    la  t2, FELIX_FRAME
+    la  t2, PLAYER_FRAME
     lw  t0, 0(t2)
     srli t0, t0, 2
     li  t1, 3
@@ -669,7 +667,7 @@ RUN_R3:
     ret
 
 ANIMAR_PULO:
-    la  t0, FELIX_DIR
+    la  t0, PLAYER_DIR
     lw  t0, 0(t0)
     beq t0, zero, PULO_RIGHT
 PULO_LEFT:
@@ -683,7 +681,7 @@ ANIMAR_ESCADA:
     la  t0, ESTA_MOVENDO
     lw  t1, 0(t0)
     beqz t1, ESCADA_PARADO
-    la  t2, FELIX_FRAME
+    la  t2, PLAYER_FRAME
     lw  t0, 0(t2)
     srli t0, t0, 3
     andi t0, t0, 1
