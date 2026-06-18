@@ -39,6 +39,21 @@ KNOCKBACK_VEL_X:         .word 0
 # MAPA
 # ===========================================================================
 
+# Largura e altura de um tile em pixels
+.eqv TILE_W 16
+.eqv TILE_H 16
+
+# Quantidade de shifts necessários para multiplicar pela largura e altura
+.eqv TILE_W_SHIFT 4
+.eqv TILE_H_SHIFT 4
+.eqv TILE_OFFSET_MASK 15
+
+.eqv TILESET_COLS 12
+.eqv TILESET_W 192
+.eqv SCREEN_W 320
+.eqv IMG_HEADER_BYTES 8
+.eqv MAP_VISIBLE_COLS 21
+
 .eqv BG_X_MIN  0
 .eqv BG_X_MAX  192
 .eqv BG_Y_MIN  0
