@@ -4,7 +4,7 @@
   "map_rows": 15,
   "tile_w": 16,
   "tile_h": 16,
-  "tileset_path": "assets/tileset/tileset.png",
+  "tileset_path": "../tileset/tileset.png",
   "collision_types": [
     {
       "id": 0,

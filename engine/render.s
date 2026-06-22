@@ -7,7 +7,8 @@
 # a1 = x na tela
 # a2 = y na tela
 # a3 = endereco base do framebuffer
-# Obs: nao faz clipping nem transparencia; usa t0-t6.
+# a4 = 0 normal; diferente de 0 espelha horizontalmente
+# Obs: nao faz clipping nem transparencia; usa t0-t6 e a5.
 PRINT:
     mv  t0, a3
     add t0, t0, a1
@@ -19,6 +20,7 @@ PRINT:
     mv  t3, zero
     lw  t4, 0(a0)
     lw  t5, 4(a0)
+    bnez a4, PRINT_FLIP_LINHA
 PRINT_LINHA:
     lw  t6, 0(t1)
     sw  t6, 0(t0)
@@ -33,13 +35,33 @@ PRINT_LINHA:
     blt  t2, t5, PRINT_LINHA
     ret
 
+PRINT_FLIP_LINHA:
+    add  t6, t1, t4
+    addi t6, t6, -1
+PRINT_FLIP_PIXEL:
+    lbu  a5, 0(t6)
+    sb   a5, 0(t0)
+    addi t6, t6, -1
+    addi t0, t0, 1
+    addi t3, t3, 1
+    blt  t3, t4, PRINT_FLIP_PIXEL
+    add  t1, t1, t4
+    addi t0, t0, 320
+    sub  t0, t0, t4
+    mv   t3, zero
+    addi t2, t2, 1
+    blt  t2, t5, PRINT_FLIP_LINHA
+    ret
+
 
 # RENDER_ENTITY: desenha imagem ancorada na base esquerda
 # a0 = imagem
 # a1 = x na tela
-# a2 = y da base da imagem
+# a2 = y da entidade no mapa/tela
 # a3 = endereco base do framebuffer
+# a4 = 0 normal; diferente de 0 espelha horizontalmente
 RENDER_ENTITY:
+    addi a2, a2, TILE_H
     lw  t0, 4(a0)
     sub a2, a2, t0
     j   PRINT

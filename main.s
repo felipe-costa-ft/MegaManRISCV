@@ -29,10 +29,9 @@ GAME_LOOP:
         call READ_INPUT
         call UPDATE_GAME
         call RENDER_FRAME
-
-        li a7, 32               # Syscall: sleep
-        li a0, 100
-        ecall
+        call PRESENT_FRAME
+        call SWAP_FRAMEBUFFER
+        call WAIT_FRAME
 
         j GAME_LOOP
 
@@ -68,16 +67,24 @@ RENDER_FRAME:
         call PLAYER_RENDER
 
 
-        # Mostra o framebuffer atual
-        li t0, 0xFF200604
-        sw s0, 0(t0)
-
-        # atualiza o framebuffer
-        xori s0, s0, 1
-
         lw s2, 4(sp)
         lw ra, 0(sp)
         addi sp, sp, 8
+        ret
+
+PRESENT_FRAME:
+        li t0, 0xFF200604
+        sw s0, 0(t0)
+        ret
+
+SWAP_FRAMEBUFFER:
+        xori s0, s0, 1
+        ret
+
+WAIT_FRAME:
+        li a7, 32               # Syscall: sleep
+        li a0, 30
+        ecall
         ret
 
 # ===========================================================================

@@ -48,9 +48,9 @@ PLAYER_RENDER:
     mv t1, a1
     la a0, megaman_direita
     mv a1, t0
-    addi t1, t1, TILE_H
     mv a2, t1
     lw a3, 4(sp)
+    li a4, 0
     call RENDER_ENTITY
 
     lw   ra, 0(sp)

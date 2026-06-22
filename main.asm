@@ -42,6 +42,7 @@ SETUP:
     li  a1, 0
     li  a2, 0
     li  a3, 0xFF000000
+    li  a4, 0
     call PRINT
 
     li  s11, 0
@@ -67,6 +68,7 @@ MOSTRA_TELA1:
     li  a1, 0
     li  a2, 0
     li  a3, 0xFF000000
+    li  a4, 0
     call PRINT
     j CHECK_KEY_INPUT
 
@@ -75,6 +77,7 @@ MOSTRA_TELA2:
     li  a1, 0
     li  a2, 0
     li  a3, 0xFF000000
+    li  a4, 0
     call PRINT
 
 CHECK_KEY_INPUT:
@@ -165,6 +168,7 @@ MF0:
     li  t0, 0xFF0
     add t0, t0, s0
     slli a3, t0, 20
+    li  a4, 0
     call PRINT
 
     li   t0, 0xFF200604
