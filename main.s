@@ -51,17 +51,13 @@ RENDER_FRAME:
         sw ra, 0(sp)
         sw s2, 4(sp)
 
-
-        # Calcula endereço do framebuffer
-        li   s2, 0xFF0
-        add  s2, s2, s0
-        slli s2, s2, 20 # s2 = 0xFF000000 ou 0xFF100000 dependendo do framebuffer atual
-
+        call GAME_GET_FRAMEBUFFER_ADDR
+        mv s2, a0
 
         la a0, MAPA1_VISUAL
         li a1, MAPA1_MAP_COLS
         li a2, MAPA1_MAP_ROWS
-        mv a3,s2
+        mv a3, s2
         call RENDER_MAPA
 
         mv a3, s2
@@ -71,6 +67,14 @@ RENDER_FRAME:
         lw s2, 4(sp)
         lw ra, 0(sp)
         addi sp, sp, 8
+        ret
+
+# GAME_GET_FRAMEBUFFER_ADDR
+# retorna a0 = endereco base do framebuffer atual.
+GAME_GET_FRAMEBUFFER_ADDR:
+        li   a0, 0xFF0
+        add  a0, a0, s0
+        slli a0, a0, 20
         ret
 
 PRESENT_FRAME:
