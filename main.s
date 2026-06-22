@@ -21,16 +21,17 @@ OLD_BG_POS: .half 0, 0
 .text
 
 main:
+        li s0, 0
         call PLAYER_SETUP
 
 GAME_LOOP:
 
+        call READ_INPUT
         call UPDATE_GAME
-
         call RENDER_FRAME
 
         li a7, 32               # Syscall: sleep
-        li a0, 1000
+        li a0, 100
         ecall
 
         j GAME_LOOP
@@ -65,6 +66,14 @@ RENDER_FRAME:
 
         mv a3, s2
         call PLAYER_RENDER
+
+
+        # Mostra o framebuffer atual
+        li t0, 0xFF200604
+        sw s0, 0(t0)
+
+        # atualiza o framebuffer
+        xori s0, s0, 1
 
         lw s2, 4(sp)
         lw ra, 0(sp)

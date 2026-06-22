@@ -94,14 +94,6 @@ PLAYER_JUMP:
 
 PLAYER_MOVE_RIGHT:
 
-    li a7, 11
-    li a0, 'R'
-    ecall
-
-    li a7, 11
-    li a0, 10      # '\n'
-    ecall
-
     la t0, PLAYER_POSITION
     lhu t1, 0(t0)
     addi t1, t1, 4
@@ -110,12 +102,9 @@ PLAYER_MOVE_RIGHT:
     ret
 
 PLAYER_MOVE_LEFT:
-    li a7, 11
-    li a0, 'L'
-    ecall
-
-    li a7, 11
-    li a0, 10      # '\n'
-    ecall
+    la t0, PLAYER_POSITION
+    lhu t1, 0(t0)
+    addi t1, t1, -4
+    sh t1, 0(t0)
 
     ret
