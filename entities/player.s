@@ -64,6 +64,7 @@ PLAYER_UPDATE:
     call PLAYER_READ_INPUT
     call PLAYER_APPLY_VERTICAL_PHYSICS
     call PLAYER_UPDATE_STATE
+    call PLAYER_UPDATE_ANIMATION
 
     lw   ra, 0(sp)
     addi sp, sp, 4
@@ -72,7 +73,7 @@ PLAYER_UPDATE:
 # PLAYER_RENDER
 # a3 = endereco base do framebuffer
 PLAYER_RENDER:
-    addi sp, sp, -8
+    addi sp, sp, -16
     sw   ra, 0(sp)
     sw   a3, 4(sp)
 
@@ -81,17 +82,19 @@ PLAYER_RENDER:
     lh a1, 2(t0)
     call WORLD_TO_SCREEN_POSITION
 
-    mv t0, a0
-    mv t1, a1
-    la a0, megaman_direita
-    mv a1, t0
-    mv a2, t1
+    sw a0, 8(sp)
+    sw a1, 12(sp)
+
+    call PLAYER_GET_CURRENT_SPRITE
+
+    lw a1, 8(sp)
+    lw a2, 12(sp)
     lw a3, 4(sp)
     li a4, 0
     call RENDER_ENTITY
 
     lw   ra, 0(sp)
-    addi sp, sp, 8
+    addi sp, sp, 16
     ret
 
 # PLAYER_READ_INPUT
@@ -207,6 +210,138 @@ _PLAYER_UPDATE_STATE_MOVING:
     call PLAYER_SET_STATE
 
 _PLAYER_UPDATE_STATE_DONE:
+    lw   ra, 0(sp)
+    addi sp, sp, 4
+    ret
+
+# PLAYER_UPDATE_ANIMATION
+# Atualiza contador de animacao do player.
+PLAYER_UPDATE_ANIMATION:
+    la a0, PLAYER_ANIMATION_FRAME
+    j ANIMATION_UPDATE
+
+# PLAYER_GET_CURRENT_SPRITE
+# retorna a0 = sprite atual do player.
+PLAYER_GET_CURRENT_SPRITE:
+    addi sp, sp, -4
+    sw   ra, 0(sp)
+
+    la t0, PLAYER_STATE
+    lw t1, 0(t0)
+
+    li t2, PLAYER_STATE_NA_ESCADA
+    beq t1, t2, _PLAYER_GET_CURRENT_SPRITE_LADDER
+
+    li t2, PLAYER_STATE_NO_AR
+    beq t1, t2, _PLAYER_GET_CURRENT_SPRITE_JUMP
+
+    li t2, PLAYER_STATE_ANDANDO
+    beq t1, t2, _PLAYER_GET_CURRENT_SPRITE_RUNNING
+
+    j _PLAYER_GET_CURRENT_SPRITE_IDLE
+
+_PLAYER_GET_CURRENT_SPRITE_IDLE:
+    la t0, PLAYER_DIRECTION
+    lw t1, 0(t0)
+
+    la t0, PLAYER_ANIMATION_FRAME
+    lw t2, 0(t0)
+    srli t2, t2, 3
+    andi t2, t2, 1
+
+    beqz t1, _PLAYER_GET_CURRENT_SPRITE_IDLE_RIGHT
+
+_PLAYER_GET_CURRENT_SPRITE_IDLE_LEFT:
+    bnez t2, _PLAYER_GET_CURRENT_SPRITE_LEFT
+    la a0, megaman_piscando_esquerda
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_IDLE_RIGHT:
+    bnez t2, _PLAYER_GET_CURRENT_SPRITE_RIGHT
+    la a0, megaman_piscando_direita
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_RUNNING:
+    la t0, PLAYER_ANIMATION_FRAME
+    lw a0, 0(t0)
+    li a1, 2
+    li a2, 3
+    call ANIMATION_GET_FRAME_INDEX
+
+    la t0, PLAYER_DIRECTION
+    lw t1, 0(t0)
+    beqz t1, _PLAYER_GET_CURRENT_SPRITE_RUNNING_RIGHT
+
+_PLAYER_GET_CURRENT_SPRITE_RUNNING_LEFT:
+    li t2, 1
+    beq a0, t2, _PLAYER_GET_CURRENT_SPRITE_RUN_LEFT_2
+    li t2, 2
+    beq a0, t2, _PLAYER_GET_CURRENT_SPRITE_RUN_LEFT_3
+    la a0, megaman_correndo_esquerda1
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_RUN_LEFT_2:
+    la a0, megaman_correndo_esquerda2
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_RUN_LEFT_3:
+    la a0, megaman_correndo_esquerda3
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_RUNNING_RIGHT:
+    li t2, 1
+    beq a0, t2, _PLAYER_GET_CURRENT_SPRITE_RUN_RIGHT_2
+    li t2, 2
+    beq a0, t2, _PLAYER_GET_CURRENT_SPRITE_RUN_RIGHT_3
+    la a0, megaman_correndo_direita1
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_RUN_RIGHT_2:
+    la a0, megaman_correndo_direita2
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_RUN_RIGHT_3:
+    la a0, megaman_correndo_direita3
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_JUMP:
+    la t0, PLAYER_DIRECTION
+    lw t1, 0(t0)
+    beqz t1, _PLAYER_GET_CURRENT_SPRITE_JUMP_RIGHT
+    la a0, megaman_pulando_esquerda
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_JUMP_RIGHT:
+    la a0, megaman_pulando_direita
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_LADDER:
+    la t0, PLAYER_IS_MOVING
+    lw t1, 0(t0)
+    beqz t1, _PLAYER_GET_CURRENT_SPRITE_LADDER_1
+
+    la t0, PLAYER_ANIMATION_FRAME
+    lw t2, 0(t0)
+    srli t2, t2, 3
+    andi t2, t2, 1
+    bnez t2, _PLAYER_GET_CURRENT_SPRITE_LADDER_2
+
+_PLAYER_GET_CURRENT_SPRITE_LADDER_1:
+    la a0, megaman_subindo_escada_1
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_LADDER_2:
+    la a0, megaman_subindo_escada_2
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_LEFT:
+    la a0, megaman_esquerda
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_RIGHT:
+    la a0, megaman_direita
+
+_PLAYER_GET_CURRENT_SPRITE_DONE:
     lw   ra, 0(sp)
     addi sp, sp, 4
     ret
