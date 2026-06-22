@@ -40,6 +40,7 @@ UPDATE_GAME:
         sw   ra, 0(sp)
 
         call PLAYER_UPDATE
+        call CAMERA_UPDATE
 
         lw   ra, 0(sp)
         addi sp, sp, 4
@@ -93,6 +94,7 @@ WAIT_FRAME:
 .include "engine/render.s"
 .include "engine/input.s"
 .include "engine/physics.s"
+.include "engine/camera.s"
 .include "utils.s"
 
 .include "entities/player.s"

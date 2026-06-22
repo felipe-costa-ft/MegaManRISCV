@@ -151,51 +151,44 @@ _PLAYER_START_JUMP_DONE:
     ret
 
 # PLAYER_APPLY_VERTICAL_PHYSICS
-# Aplica velocidade vertical, gravidade e limite inferior.
+# Aplica velocidade vertical e colisao vertical no mapa.
 PLAYER_APPLY_VERTICAL_PHYSICS:
+    addi sp, sp, -4
+    sw   ra, 0(sp)
+
     la t0, PLAYER_POSITION
-    lh t1, 2(t0)
+    lh a0, 0(t0)
+    lh a1, 2(t0)
 
     la t2, PLAYER_VEL_Y
-    lw t3, 0(t2)
-    add t1, t1, t3
+    lw a4, 0(t2)
 
-    bltz t1, _PLAYER_APPLY_VERTICAL_PHYSICS_TOP
-    j _PLAYER_APPLY_VERTICAL_PHYSICS_BOTTOM
+    li t3, TILE_H
+    add a1, a1, t3
+    li t3, PLAYER_ALTURA
+    sub a1, a1, t3
+    add a1, a1, a4
 
-_PLAYER_APPLY_VERTICAL_PHYSICS_TOP:
-    li t1, PLAYER_Y_MIN
-    sw zero, 0(t2)
-    j _PLAYER_APPLY_VERTICAL_PHYSICS_SAVE
+    li a2, PLAYER_LARGURA
+    li a3, PLAYER_ALTURA
+    call PHYSICS_RESOLVE_VERTICAL_MAP_COLLISION
 
-_PLAYER_APPLY_VERTICAL_PHYSICS_BOTTOM:
-    li t4, PLAYER_Y_MAX
-    ble t1, t4, _PLAYER_APPLY_VERTICAL_PHYSICS_GRAVITY
+    la t0, PLAYER_VEL_Y
+    sw a1, 0(t0)
 
-    mv t1, t4
-    sw zero, 0(t2)
-    la t5, PLAYER_IS_IN_AIR
-    sw zero, 0(t5)
-    j _PLAYER_APPLY_VERTICAL_PHYSICS_SAVE
+    la t0, PLAYER_IS_IN_AIR
+    sw a2, 0(t0)
 
-_PLAYER_APPLY_VERTICAL_PHYSICS_GRAVITY:
-    addi t3, t3, 1
-    li t4, 6
-    ble t3, t4, _PLAYER_APPLY_VERTICAL_PHYSICS_STORE_VEL
-    mv t3, t4
+    li t1, PLAYER_ALTURA
+    add t1, a0, t1
+    li t2, TILE_H
+    sub t1, t1, t2
 
-_PLAYER_APPLY_VERTICAL_PHYSICS_STORE_VEL:
-    sw t3, 0(t2)
-    bnez t3, _PLAYER_APPLY_VERTICAL_PHYSICS_SET_AIR
-    j _PLAYER_APPLY_VERTICAL_PHYSICS_SAVE
-
-_PLAYER_APPLY_VERTICAL_PHYSICS_SET_AIR:
-    la t5, PLAYER_IS_IN_AIR
-    li t6, 1
-    sw t6, 0(t5)
-
-_PLAYER_APPLY_VERTICAL_PHYSICS_SAVE:
+    la t0, PLAYER_POSITION
     sh t1, 2(t0)
+
+    lw   ra, 0(sp)
+    addi sp, sp, 4
     ret
 
 
@@ -217,6 +210,10 @@ PLAYER_MOVE_RIGHT:
     lhu t1, 0(t0)
     addi t1, t1, 4
     lhu t2, 2(t0)
+    li t3, TILE_H
+    add t2, t2, t3
+    li t3, PLAYER_ALTURA
+    sub t2, t2, t3
 
     mv a0, t1
     mv a1, t2
@@ -250,6 +247,10 @@ PLAYER_MOVE_LEFT:
     lhu t1, 0(t0)
     addi t1, t1, -4
     lhu t2, 2(t0)
+    li t3, TILE_H
+    add t2, t2, t3
+    li t3, PLAYER_ALTURA
+    sub t2, t2, t3
 
     mv a0, t1
     mv a1, t2
