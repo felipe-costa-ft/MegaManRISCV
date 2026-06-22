@@ -2,7 +2,7 @@
 # engine/render.s - Motor de Renderização Base
 # ===========================================================================
 
-# PRINT: desenha imagem em (x, y)
+# PRINT: desenha imagem ancorada no canto superior esquerdo
 # a0 = imagem (.word largura, altura; depois pixels)
 # a1 = x na tela
 # a2 = y na tela
@@ -32,6 +32,17 @@ PRINT_LINHA:
     addi t2, t2, 1
     blt  t2, t5, PRINT_LINHA
     ret
+
+
+# RENDER_ENTITY: desenha imagem ancorada na base esquerda
+# a0 = imagem
+# a1 = x na tela
+# a2 = y da base da imagem
+# a3 = endereco base do framebuffer
+RENDER_ENTITY:
+    lw  t0, 4(a0)
+    sub a2, a2, t0
+    j   PRINT
 
 
 # RENDER_TILE: renderiza tile na posição x=a1, y=a2, framebuffer=a3

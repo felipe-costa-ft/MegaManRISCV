@@ -1,8 +1,5 @@
 .data
 
-msg1: 	.string "aqui!\n"
-
-
 PLAYER_POSITION:     .half 0, 0
 PLAYER_OLD_POSITION: .half 16, 168
 
@@ -51,9 +48,10 @@ PLAYER_RENDER:
     mv t1, a1
     la a0, megaman_direita
     mv a1, t0
+    addi t1, t1, TILE_H
     mv a2, t1
     lw a3, 4(sp)
-    call PRINT
+    call RENDER_ENTITY
 
     lw   ra, 0(sp)
     addi sp, sp, 8
@@ -100,12 +98,14 @@ PLAYER_MOVE_RIGHT:
     li a0, 'R'
     ecall
 
-
-
     li a7, 11
     li a0, 10      # '\n'
     ecall
 
+    la t0, PLAYER_POSITION
+    lhu t1, 0(t0)
+    addi t1, t1, 4
+    sh t1, 0(t0)
 
     ret
 
