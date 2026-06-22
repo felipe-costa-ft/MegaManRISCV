@@ -202,6 +202,9 @@ _PLAYER_APPLY_VERTICAL_PHYSICS_SAVE:
 # PLAYER_MOVE_RIGHT
 # Move player para direita e atualiza direcao.
 PLAYER_MOVE_RIGHT:
+    addi sp, sp, -4
+    sw   ra, 0(sp)
+
     li t1, 1
     la t0, PLAYER_IS_MOVING
     sw t1, 0(t0)
@@ -213,13 +216,28 @@ PLAYER_MOVE_RIGHT:
     la t0, PLAYER_POSITION
     lhu t1, 0(t0)
     addi t1, t1, 4
-    sh t1, 0(t0)
+    lhu t2, 2(t0)
 
+    mv a0, t1
+    mv a1, t2
+    li a2, PLAYER_LARGURA
+    li a3, PLAYER_ALTURA
+    li a4, 1
+    call PHYSICS_RESOLVE_HORIZONTAL_MAP_COLLISION
+
+    la t0, PLAYER_POSITION
+    sh a0, 0(t0)
+
+    lw   ra, 0(sp)
+    addi sp, sp, 4
     ret
 
 # PLAYER_MOVE_LEFT
 # Move player para esquerda e atualiza direcao.
 PLAYER_MOVE_LEFT:
+    addi sp, sp, -4
+    sw   ra, 0(sp)
+
     li t1, 1
     la t0, PLAYER_IS_MOVING
     sw t1, 0(t0)
@@ -231,6 +249,18 @@ PLAYER_MOVE_LEFT:
     la t0, PLAYER_POSITION
     lhu t1, 0(t0)
     addi t1, t1, -4
-    sh t1, 0(t0)
+    lhu t2, 2(t0)
 
+    mv a0, t1
+    mv a1, t2
+    li a2, PLAYER_LARGURA
+    li a3, PLAYER_ALTURA
+    li a4, -1
+    call PHYSICS_RESOLVE_HORIZONTAL_MAP_COLLISION
+
+    la t0, PLAYER_POSITION
+    sh a0, 0(t0)
+
+    lw   ra, 0(sp)
+    addi sp, sp, 4
     ret
