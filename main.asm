@@ -607,10 +607,10 @@ PARADO_LEFT:
     srli t0, t0, 3
     andi t0, t0, 1
     bnez t0, NOT_REBAIXADO_LEFT
-    la   a0, megaman_piscando_esquerda
+    la   a0, PLAYER_SPRITE_IDLE_BLINK
     ret
 NOT_REBAIXADO_LEFT:
-    la   a0, megaman_esquerda
+    la   a0, PLAYER_SPRITE_IDLE
     ret
 
 PARADO_RIGHT:
@@ -619,10 +619,10 @@ PARADO_RIGHT:
     srli t0, t0, 3
     andi t0, t0, 1
     bnez t0, NOT_REBAIXADO
-    la   a0, megaman_piscando_direita
+    la   a0, PLAYER_SPRITE_IDLE_BLINK
     ret
 NOT_REBAIXADO:
-    la   a0, megaman_direita
+    la   a0, PLAYER_SPRITE_IDLE
     ret
 
 ANIMAR_ANDANDO:
@@ -642,13 +642,13 @@ ANDANDO_LEFT:
     li  t1, 2
     beq t0, t1, RUN_L3
 RUN_L1:
-    la  a0, megaman_correndo_esquerda1
+    la  a0, PLAYER_SPRITE_RUN_1
     ret
 RUN_L2:
-    la  a0, megaman_correndo_esquerda2
+    la  a0, PLAYER_SPRITE_RUN_2
     ret
 RUN_L3:
-    la  a0, megaman_correndo_esquerda3
+    la  a0, PLAYER_SPRITE_RUN_3
     ret
 
 ANDANDO_RIGHT:
@@ -663,13 +663,13 @@ ANDANDO_RIGHT:
     li  t1, 2
     beq t0, t1, RUN_R3
 RUN_R1:
-    la  a0, megaman_correndo_direita1
+    la  a0, PLAYER_SPRITE_RUN_1
     ret
 RUN_R2:
-    la  a0, megaman_correndo_direita2
+    la  a0, PLAYER_SPRITE_RUN_2
     ret
 RUN_R3:
-    la  a0, megaman_correndo_direita3
+    la  a0, PLAYER_SPRITE_RUN_3
     ret
 
 ANIMAR_PULO:
@@ -677,10 +677,10 @@ ANIMAR_PULO:
     lw  t0, 0(t0)
     beq t0, zero, PULO_RIGHT
 PULO_LEFT:
-    la  a0, megaman_pulando_esquerda
+    la  a0, PLAYER_SPRITE_JUMP
     ret
 PULO_RIGHT:
-    la  a0, megaman_pulando_direita
+    la  a0, PLAYER_SPRITE_JUMP
     ret
 
 ANIMAR_ESCADA:
@@ -693,13 +693,13 @@ ANIMAR_ESCADA:
     andi t0, t0, 1
     bnez t0, ESCADA_LADO2
 ESCADA_LADO1:
-    la  a0, megaman_subindo_escada_1
+    la  a0, PLAYER_SPRITE_LADDER_1
     ret
 ESCADA_LADO2:
-    la  a0, megaman_subindo_escada_2
+    la  a0, PLAYER_SPRITE_LADDER_2
     ret
 ESCADA_PARADO:
-    la  a0, megaman_subindo_escada_1
+    la  a0, PLAYER_SPRITE_LADDER_1
     ret
 
 

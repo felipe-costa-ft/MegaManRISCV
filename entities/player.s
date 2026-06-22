@@ -73,7 +73,7 @@ PLAYER_UPDATE:
 # PLAYER_RENDER
 # a3 = endereco base do framebuffer
 PLAYER_RENDER:
-    addi sp, sp, -16
+    addi sp, sp, -20
     sw   ra, 0(sp)
     sw   a3, 4(sp)
 
@@ -86,15 +86,18 @@ PLAYER_RENDER:
     sw a1, 12(sp)
 
     call PLAYER_GET_CURRENT_SPRITE
+    sw a0, 16(sp)
+    call PLAYER_GET_RENDER_FLAGS
 
+    mv a4, a0
+    lw a0, 16(sp)
     lw a1, 8(sp)
     lw a2, 12(sp)
     lw a3, 4(sp)
-    li a4, 0
     call RENDER_ENTITY
 
     lw   ra, 0(sp)
-    addi sp, sp, 16
+    addi sp, sp, 20
     ret
 
 # PLAYER_READ_INPUT
@@ -221,7 +224,7 @@ PLAYER_UPDATE_ANIMATION:
     j ANIMATION_UPDATE
 
 # PLAYER_GET_CURRENT_SPRITE
-# retorna a0 = sprite atual do player.
+# retorna a0 = sprite base atual do player.
 PLAYER_GET_CURRENT_SPRITE:
     addi sp, sp, -4
     sw   ra, 0(sp)
@@ -241,24 +244,13 @@ PLAYER_GET_CURRENT_SPRITE:
     j _PLAYER_GET_CURRENT_SPRITE_IDLE
 
 _PLAYER_GET_CURRENT_SPRITE_IDLE:
-    la t0, PLAYER_DIRECTION
-    lw t1, 0(t0)
-
     la t0, PLAYER_ANIMATION_FRAME
     lw t2, 0(t0)
     srli t2, t2, 3
     andi t2, t2, 1
 
-    beqz t1, _PLAYER_GET_CURRENT_SPRITE_IDLE_RIGHT
-
-_PLAYER_GET_CURRENT_SPRITE_IDLE_LEFT:
-    bnez t2, _PLAYER_GET_CURRENT_SPRITE_LEFT
-    la a0, megaman_piscando_esquerda
-    j _PLAYER_GET_CURRENT_SPRITE_DONE
-
-_PLAYER_GET_CURRENT_SPRITE_IDLE_RIGHT:
     bnez t2, _PLAYER_GET_CURRENT_SPRITE_RIGHT
-    la a0, megaman_piscando_direita
+    la a0, PLAYER_SPRITE_IDLE_BLINK
     j _PLAYER_GET_CURRENT_SPRITE_DONE
 
 _PLAYER_GET_CURRENT_SPRITE_RUNNING:
@@ -268,51 +260,23 @@ _PLAYER_GET_CURRENT_SPRITE_RUNNING:
     li a2, 3
     call ANIMATION_GET_FRAME_INDEX
 
-    la t0, PLAYER_DIRECTION
-    lw t1, 0(t0)
-    beqz t1, _PLAYER_GET_CURRENT_SPRITE_RUNNING_RIGHT
-
-_PLAYER_GET_CURRENT_SPRITE_RUNNING_LEFT:
-    li t2, 1
-    beq a0, t2, _PLAYER_GET_CURRENT_SPRITE_RUN_LEFT_2
-    li t2, 2
-    beq a0, t2, _PLAYER_GET_CURRENT_SPRITE_RUN_LEFT_3
-    la a0, megaman_correndo_esquerda1
-    j _PLAYER_GET_CURRENT_SPRITE_DONE
-
-_PLAYER_GET_CURRENT_SPRITE_RUN_LEFT_2:
-    la a0, megaman_correndo_esquerda2
-    j _PLAYER_GET_CURRENT_SPRITE_DONE
-
-_PLAYER_GET_CURRENT_SPRITE_RUN_LEFT_3:
-    la a0, megaman_correndo_esquerda3
-    j _PLAYER_GET_CURRENT_SPRITE_DONE
-
-_PLAYER_GET_CURRENT_SPRITE_RUNNING_RIGHT:
     li t2, 1
     beq a0, t2, _PLAYER_GET_CURRENT_SPRITE_RUN_RIGHT_2
     li t2, 2
     beq a0, t2, _PLAYER_GET_CURRENT_SPRITE_RUN_RIGHT_3
-    la a0, megaman_correndo_direita1
+    la a0, PLAYER_SPRITE_RUN_1
     j _PLAYER_GET_CURRENT_SPRITE_DONE
 
 _PLAYER_GET_CURRENT_SPRITE_RUN_RIGHT_2:
-    la a0, megaman_correndo_direita2
+    la a0, PLAYER_SPRITE_RUN_2
     j _PLAYER_GET_CURRENT_SPRITE_DONE
 
 _PLAYER_GET_CURRENT_SPRITE_RUN_RIGHT_3:
-    la a0, megaman_correndo_direita3
+    la a0, PLAYER_SPRITE_RUN_3
     j _PLAYER_GET_CURRENT_SPRITE_DONE
 
 _PLAYER_GET_CURRENT_SPRITE_JUMP:
-    la t0, PLAYER_DIRECTION
-    lw t1, 0(t0)
-    beqz t1, _PLAYER_GET_CURRENT_SPRITE_JUMP_RIGHT
-    la a0, megaman_pulando_esquerda
-    j _PLAYER_GET_CURRENT_SPRITE_DONE
-
-_PLAYER_GET_CURRENT_SPRITE_JUMP_RIGHT:
-    la a0, megaman_pulando_direita
+    la a0, PLAYER_SPRITE_JUMP
     j _PLAYER_GET_CURRENT_SPRITE_DONE
 
 _PLAYER_GET_CURRENT_SPRITE_LADDER:
@@ -327,23 +291,27 @@ _PLAYER_GET_CURRENT_SPRITE_LADDER:
     bnez t2, _PLAYER_GET_CURRENT_SPRITE_LADDER_2
 
 _PLAYER_GET_CURRENT_SPRITE_LADDER_1:
-    la a0, megaman_subindo_escada_1
+    la a0, PLAYER_SPRITE_LADDER_1
     j _PLAYER_GET_CURRENT_SPRITE_DONE
 
 _PLAYER_GET_CURRENT_SPRITE_LADDER_2:
-    la a0, megaman_subindo_escada_2
-    j _PLAYER_GET_CURRENT_SPRITE_DONE
-
-_PLAYER_GET_CURRENT_SPRITE_LEFT:
-    la a0, megaman_esquerda
+    la a0, PLAYER_SPRITE_LADDER_2
     j _PLAYER_GET_CURRENT_SPRITE_DONE
 
 _PLAYER_GET_CURRENT_SPRITE_RIGHT:
-    la a0, megaman_direita
+    la a0, PLAYER_SPRITE_IDLE
 
 _PLAYER_GET_CURRENT_SPRITE_DONE:
     lw   ra, 0(sp)
     addi sp, sp, 4
+    ret
+
+# PLAYER_GET_RENDER_FLAGS
+# retorna a0 = 1 se deve espelhar horizontalmente.
+PLAYER_GET_RENDER_FLAGS:
+    la t0, PLAYER_DIRECTION
+    lw t1, 0(t0)
+    snez a0, t1
     ret
 
 # PLAYER_APPLY_VERTICAL_PHYSICS
