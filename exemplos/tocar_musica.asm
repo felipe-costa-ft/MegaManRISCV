@@ -7,7 +7,6 @@ NOTAS: 55,234,57,234,60,351,55,234,55,234,57,117,60,234,57,234,64,117,64,234,64,
 .text
 
 # Função PLAYMUSIC
-.globl PLAYMUSIC
 PLAYMUSIC:
     # Salva os registradores que serão usados na pilha
     addi sp, sp, -20      # Cria espaço na pilha

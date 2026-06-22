@@ -66,7 +66,6 @@ def main():
             f.write(f"# Sprite gerado automaticamente: {nome}\n")
             f.write(f".data\n")
             f.write(f".align 2\n")
-            f.write(f".globl {nome}_sprite\n")
             f.write(f"{nome}_sprite:\n")
             
             # A função PRINT no render.asm espera a largura em bytes (pixels * 4) e altura em linhas

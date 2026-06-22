@@ -2,28 +2,17 @@
 
 .include "consts.s"
 
+.include "assets/tileset/tileset.data"
 
-.include "imagens/MAPA1_defs.s"
-.include "imagens/MAPA1_colisao.s"
-.include "imagens/MAPA1_visual.s"
-.include "imagens/MAPA1_entidades.s"
-.include "imagens/megaman_direita.data"
-.include "imagens/tileset.data"
-.include "imagens/tela_inicial1.data"
-.include "imagens/tela_inicial2.data"
-.include "imagens/megaman_correndo_direita1.data"
-.include "imagens/megaman_correndo_direita2.data"
-.include "imagens/megaman_correndo_direita3.data"
-.include "imagens/megaman_correndo_esquerda1.data"
-.include "imagens/megaman_correndo_esquerda2.data"
-.include "imagens/megaman_correndo_esquerda3.data"
-.include "imagens/megaman_esquerda.data"
-.include "imagens/megaman_piscando_esquerda.data"
-.include "imagens/megaman_piscando_direita.data"
-.include "imagens/megaman_pulando_direita.data"
-.include "imagens/megaman_pulando_esquerda.data"
-.include "imagens/megaman_subindo_escada_1.data"
-.include "imagens/megaman_subindo_escada_2.data"
+.include "assets/maps/MAPA1_defs.s"
+.include "assets/maps/MAPA1_tileset_offsets.s"
+.include "assets/maps/MAPA1_entidades.s"
+.include "assets/maps/MAPA1_colisao.s"
+.include "assets/maps/MAPA1_visual.s"
+.include "assets/maps/tela_inicial1.data"
+.include "assets/maps/tela_inicial2.data"
+.include "assets/sprites/player/megaman_frames.data"
+
 
 notas: .word 9, 0, 0, 67, 1000, 0, 74, 1000, 0, 70, 1500, 0, 69, 500, 0, 67, 500, 0, 70, 500, 0, 69, 500, 0, 67, 500, 0, 66, 500, 0,
 
@@ -52,7 +41,8 @@ SETUP:
     la  a0, tela_inicial1
     li  a1, 0
     li  a2, 0
-    li  a3, 0
+    li  a3, 0xFF000000
+    li  a4, 0
     call PRINT
 
     li  s11, 0
@@ -77,7 +67,8 @@ MOSTRA_TELA1:
     la  a0, tela_inicial1
     li  a1, 0
     li  a2, 0
-    li  a3, 0
+    li  a3, 0xFF000000
+    li  a4, 0
     call PRINT
     j CHECK_KEY_INPUT
 
@@ -85,7 +76,8 @@ MOSTRA_TELA2:
     la  a0, tela_inicial2
     li  a1, 0
     li  a2, 0
-    li  a3, 0
+    li  a3, 0xFF000000
+    li  a4, 0
     call PRINT
 
 CHECK_KEY_INPUT:
@@ -95,10 +87,16 @@ CHECK_KEY_INPUT:
     lw  t2, 4(s10)
     sw  t2, 12(s10)
 
-    li  a3, 0
-    call PRINT_MAPA
-    li  a3, 1
-    call PRINT_MAPA
+    la  a0, MAPA1_VISUAL
+    li  a1, MAPA1_MAP_COLS
+    li  a2, MAPA1_MAP_ROWS
+    li  a3, 0xFF000000
+    call RENDER_MAPA
+    la  a0, MAPA1_VISUAL
+    li  a1, MAPA1_MAP_COLS
+    li  a2, MAPA1_MAP_ROWS
+    li  a3, 0xFF100000
+    call RENDER_MAPA
 
 GAME_LOOP:
     li  a7, 30
@@ -167,15 +165,23 @@ MF0:
     la  t0, CHAR_POS
     lh  a1, 0(t0)
     lh  a2, 2(t0)
-    mv  a3, s0
+    li  t0, 0xFF0
+    add t0, t0, s0
+    slli a3, t0, 20
+    li  a4, 0
     call PRINT
 
     li   t0, 0xFF200604
     sw   s0, 0(t0)
 
-    mv   a3, s0
-    xori a3, a3, 1
-    call PRINT_MAPA
+    la   a0, MAPA1_VISUAL
+    li   a1, MAPA1_MAP_COLS
+    li   a2, MAPA1_MAP_ROWS
+    xori t0, s0, 1
+    li   a3, 0xFF0
+    add  a3, a3, t0
+    slli a3, a3, 20
+    call RENDER_MAPA
 
     li  a7, 30
     ecall
@@ -601,10 +607,10 @@ PARADO_LEFT:
     srli t0, t0, 3
     andi t0, t0, 1
     bnez t0, NOT_REBAIXADO_LEFT
-    la   a0, megaman_piscando_esquerda
+    la   a0, PLAYER_SPRITE_IDLE_BLINK
     ret
 NOT_REBAIXADO_LEFT:
-    la   a0, megaman_esquerda
+    la   a0, PLAYER_SPRITE_IDLE
     ret
 
 PARADO_RIGHT:
@@ -613,10 +619,10 @@ PARADO_RIGHT:
     srli t0, t0, 3
     andi t0, t0, 1
     bnez t0, NOT_REBAIXADO
-    la   a0, megaman_piscando_direita
+    la   a0, PLAYER_SPRITE_IDLE_BLINK
     ret
 NOT_REBAIXADO:
-    la   a0, megaman_direita
+    la   a0, PLAYER_SPRITE_IDLE
     ret
 
 ANIMAR_ANDANDO:
@@ -636,13 +642,13 @@ ANDANDO_LEFT:
     li  t1, 2
     beq t0, t1, RUN_L3
 RUN_L1:
-    la  a0, megaman_correndo_esquerda1
+    la  a0, PLAYER_SPRITE_RUN_1
     ret
 RUN_L2:
-    la  a0, megaman_correndo_esquerda2
+    la  a0, PLAYER_SPRITE_RUN_2
     ret
 RUN_L3:
-    la  a0, megaman_correndo_esquerda3
+    la  a0, PLAYER_SPRITE_RUN_3
     ret
 
 ANDANDO_RIGHT:
@@ -657,13 +663,13 @@ ANDANDO_RIGHT:
     li  t1, 2
     beq t0, t1, RUN_R3
 RUN_R1:
-    la  a0, megaman_correndo_direita1
+    la  a0, PLAYER_SPRITE_RUN_1
     ret
 RUN_R2:
-    la  a0, megaman_correndo_direita2
+    la  a0, PLAYER_SPRITE_RUN_2
     ret
 RUN_R3:
-    la  a0, megaman_correndo_direita3
+    la  a0, PLAYER_SPRITE_RUN_3
     ret
 
 ANIMAR_PULO:
@@ -671,10 +677,10 @@ ANIMAR_PULO:
     lw  t0, 0(t0)
     beq t0, zero, PULO_RIGHT
 PULO_LEFT:
-    la  a0, megaman_pulando_esquerda
+    la  a0, PLAYER_SPRITE_JUMP
     ret
 PULO_RIGHT:
-    la  a0, megaman_pulando_direita
+    la  a0, PLAYER_SPRITE_JUMP
     ret
 
 ANIMAR_ESCADA:
@@ -687,41 +693,15 @@ ANIMAR_ESCADA:
     andi t0, t0, 1
     bnez t0, ESCADA_LADO2
 ESCADA_LADO1:
-    la  a0, megaman_subindo_escada_1
+    la  a0, PLAYER_SPRITE_LADDER_1
     ret
 ESCADA_LADO2:
-    la  a0, megaman_subindo_escada_2
+    la  a0, PLAYER_SPRITE_LADDER_2
     ret
 ESCADA_PARADO:
-    la  a0, megaman_subindo_escada_1
+    la  a0, PLAYER_SPRITE_LADDER_1
     ret
 
-PRINT:
-    li  t0, 0xFF0
-    add t0, t0, a3
-    slli t0, t0, 20
-    add t0, t0, a1
-    li  t1, 320
-    mul t1, t1, a2
-    add t0, t0, t1
-    addi t1, a0, 8
-    mv  t2, zero
-    mv  t3, zero
-    lw  t4, 0(a0)
-    lw  t5, 4(a0)
-PRINT_LINHA:
-    lw  t6, 0(t1)
-    sw  t6, 0(t0)
-    addi t0, t0, 4
-    addi t1, t1, 4
-    addi t3, t3, 4
-    blt  t3, t4, PRINT_LINHA
-    addi t0, t0, 320
-    sub  t0, t0, t4
-    mv  t3, zero
-    addi t2, t2, 1
-    blt  t2, t5, PRINT_LINHA
-    ret
 
 CHECA_TILE:
     la  t0, BG_POS
@@ -747,125 +727,4 @@ TILE_VAZIO:
     li  a0, 0
     ret
 
-PRINT_TILE:
-    li   t0, 12
-    rem  t1, a0, t0
-    div  t2, a0, t0
-
-    li   t3, 0
-    bgez a1, PT_CL_OK
-    sub  t3, zero, a1
-PT_CL_OK:
-    li   t4, 0
-    addi t5, a1, 16
-    li   t6, 320
-    ble  t5, t6, PT_CR_OK
-    sub  t4, t5, t6
-PT_CR_OK:
-    li   t5, 16
-    sub  t5, t5, t3
-    sub  t5, t5, t4
-    blez t5, PT_RET
-
-    la   t6, tileset
-    addi t6, t6, 8
-    li   t0, 3072
-    mul  t0, t2, t0
-    add  t6, t6, t0
-    slli t0, t1, 4
-    add  t6, t6, t0
-    add  t6, t6, t3
-
-    li   t0, 0xFF0
-    add  t0, t0, a3
-    slli t0, t0, 20
-    add  t1, a1, t3
-    li   t2, 320
-    mul  t2, a2, t2
-    add  t1, t1, t2
-    add  t1, t0, t1
-
-    li   t4, 0
-PT_ROW:
-    mv   t2, t6
-    mv   t3, t1
-    mv   t0, t5
-PT_PIX:
-    lbu  a0, 0(t2)
-    sb   a0, 0(t3)
-    addi t2, t2, 1
-    addi t3, t3, 1
-    addi t0, t0, -1
-    bnez t0, PT_PIX
-    li   t0, 192
-    add  t6, t6, t0
-    li   t0, 320
-    add  t1, t1, t0
-    addi t4, t4, 1
-    li   t0, 16
-    blt  t4, t0, PT_ROW
-PT_RET:
-    ret
-
-PRINT_MAPA:
-    addi sp, sp, -28
-    sw   ra,  0(sp)
-    sw   s1,  4(sp)
-    sw   s2,  8(sp)
-    sw   s3, 12(sp)
-    sw   s4, 16(sp)
-    sw   s5, 20(sp)
-    sw   s6, 24(sp)
-
-    la   t0, BG_POS
-    lh   s1, 0(t0)
-    srli s2, s1, 4
-    andi s3, s1, 15
-    mv   s4, a3
-
-    li   s5, 0
-RM_ROW:
-    li   s6, 0
-RM_COL:
-    add  t0, s2, s6
-    li   t1, MAPA1_MAP_COLS
-    bge  t0, t1, RM_NEXT_ROW
-
-    slli t2, s6, 4
-    sub  t2, t2, s3
-    li   t3, 320
-    bge  t2, t3, RM_NEXT_ROW
-
-    slli t4, s5, 4
-
-    li   t5, MAPA1_MAP_COLS
-    mul  t5, s5, t5
-    add  t5, t5, t0
-    la   t6, MAPA1_VISUAL
-    add  t6, t6, t5
-    lbu  t5, 0(t6)
-
-    mv   a0, t5
-    mv   a1, t2
-    mv   a2, t4
-    mv   a3, s4
-    call PRINT_TILE
-
-    addi s6, s6, 1
-    li   t0, 21
-    blt  s6, t0, RM_COL
-
-RM_NEXT_ROW:
-    addi s5, s5, 1
-    li   t0, MAPA1_MAP_ROWS
-    blt  s5, t0, RM_ROW
-
-    lw   ra,  0(sp)
-    lw   s1,  4(sp)
-    lw   s2,  8(sp)
-    lw   s3, 12(sp)
-    lw   s4, 16(sp)
-    lw   s5, 20(sp)
-    lw   s6, 24(sp)
-    addi sp, sp, 28
-    ret
+.include "engine/render.s"

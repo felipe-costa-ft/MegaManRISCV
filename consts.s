@@ -2,16 +2,14 @@
 # PLAYER STATE
 # ===========================================================================
 
-.eqv STATE_IDLE          0
-.eqv STATE_ANDANDO       1
-.eqv STATE_NO_AR         2
-.eqv STATE_ATIRANDO      3
-.eqv STATE_ATIRA_PULANDO 4
-.eqv STATE_NA_ESCADA     5
-.eqv STATE_ATIRA_ESCADA  6
-.eqv STATE_KNOCKBACK     7
-
-PLAYER_STATE:          .word STATE_IDLE
+.eqv PLAYER_STATE_IDLE          0
+.eqv PLAYER_STATE_ANDANDO       1
+.eqv PLAYER_STATE_NO_AR         2
+.eqv PLAYER_STATE_ATIRANDO      3
+.eqv PLAYER_STATE_ATIRA_PULANDO 4
+.eqv PLAYER_STATE_NA_ESCADA     5
+.eqv PLAYER_STATE_ATIRA_ESCADA  6
+.eqv PLAYER_STATE_KNOCKBACK     7
 
 ESTA_INVULNERAVEL:      .word 0
 INVULNERAVEL_TIMER:      .word 0

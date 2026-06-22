@@ -31,6 +31,5 @@
 #   - Verificar limites da tela (SCREEN_WIDTH, SCREEN_HEIGHT)
 #   - Detecção de colisão com o chão e plataformas
 # ===========================================================================
-.globl UPDATE_PLAYER_PHYSICS
 UPDATE_PLAYER_PHYSICS:
         ret                 # Stub - será implementado na etapa 2

@@ -29,21 +29,112 @@ um chefão.
 
 # Organização do Projeto
 
+O projeto está sendo organizado em uma arquitetura de três camadas:
+
+- **Game**: fluxo principal do jogo.
+- **Entidades**: objetos do jogo, como player, inimigos e coletáveis.
+- **Engine**: sistemas reutilizáveis, como renderização, input, física, câmera e animação.
+
+A ideia é manter `main.s` pequeno e legível. Ele coordena o frame do jogo, mas não deve concentrar regras específicas de movimento, colisão, renderização de entidade ou animação.
+
 ```
 MegaManRISCV/
-├── engine/              ← Motor do jogo (animação, entrada, física, 
-├── entities/            ← Entidades do jogo (Mega Man)
-├── assets/              ← Recursos do jogo
-│   ├── enemies/         ← Sprites de inimigos
-│   ├── tiles/           ← Blocos do mapa
-│   ├── items/           ← Itens coletáveis
-│   ├── hud/             ← Interface do jogo
-│   ├── backgrounds/     ← Fundos das fases
-│   └── sprites/         ← Sprites em bruto
-├── exemplos/            ← Exemplos de código
-├── main.asm             ← Arquivo principal
-├── macros.asm           ← Macros e utilitários
+├── main.s               ← Entrada atual do jogo e loop principal
+├── main.asm             ← Versão antiga usada como referência
+├── consts.s             ← Constantes compartilhadas
+├── utils.s              ← Rotinas utilitárias gerais
+├── engine/              ← Sistemas reutilizáveis da engine
+├── entities/            ← Código das entidades do jogo
+├── assets/              ← Sprites, tilesets, mapas e outros dados
+└── exemplos/            ← Exemplos isolados de assembly
 ```
+
+## Camadas
+
+### Game
+
+Fica principalmente em `main.s`.
+
+Responsabilidades:
+
+- inicializar o jogo;
+- executar o loop principal;
+- ler input;
+- atualizar entidades e sistemas;
+- renderizar o frame;
+- apresentar e alternar o framebuffer.
+
+O fluxo geral é:
+
+```asm
+GAME_LOOP:
+        call READ_INPUT
+        call UPDATE_GAME
+        call RENDER_FRAME
+        call PRESENT_FRAME
+        call SWAP_FRAMEBUFFER
+        call WAIT_FRAME
+        j GAME_LOOP
+```
+
+### Entidades
+
+Ficam em `entities/`.
+
+Atualmente, a entidade principal é:
+
+- `entities/player.s`: estado, input, física aplicada, máquina de estados, animação e renderização do player.
+
+Entidades devem expor rotinas de alto nível, como `PLAYER_SETUP`, `PLAYER_UPDATE` e `PLAYER_RENDER`. Quem usa a entidade não deve precisar conhecer os detalhes internos da física ou da animação dela.
+
+### Engine
+
+Fica em `engine/`.
+
+Arquivos principais:
+
+- `engine/render.s`: renderização de tiles, imagens e entidades;
+- `engine/input.s`: leitura e estado dos botões;
+- `engine/physics.s`: colisão e física baseada no mapa;
+- `engine/camera.s`: posição da câmera e scroll;
+- `engine/animation.s`: helpers genéricos de animação.
+
+A engine deve conter rotinas reutilizáveis, evitando depender diretamente de uma entidade específica quando isso não for necessário.
+
+## Organização de Assets
+
+```
+assets/
+├── maps/                ← Mapas exportados pelo editor
+├── sprites/             ← Sprites das entidades
+└── tileset/             ← Tileset visual e dados convertidos
+```
+
+Os arquivos em `assets/maps/` são gerados pelo tilemap editor. Em geral, eles não devem ser editados manualmente.
+
+O padrão atual de mapa separa:
+
+- `*_defs.s`: dimensões e constantes do mapa;
+- `*_visual.s`: camada visual;
+- `*_colisao.s`: camada de colisão;
+- `*_entidades.s`: entidades agrupadas por tipo;
+- `*_tileset_offsets.s`: offsets do tileset usado pelo render.
+
+## Convenções de Código
+
+- Rotinas e variáveis relacionadas a uma entidade começam com o nome da entidade.
+  Exemplo: `PLAYER_SETUP`, `PLAYER_UPDATE`, `PLAYER_POSITION`.
+- Rotinas de engine usam o prefixo do sistema.
+  Exemplo: `PHYSICS_`, `RENDER_`, `CAMERA_`, `ANIMATION_`, `INPUT_`.
+- Labels internas de uma rotina usam `_` no começo e mantêm o prefixo do contexto.
+  Exemplo: `_PLAYER_UPDATE_STATE_AIR`, `_PHYSICS_RESOLVE_VERTICAL_DONE`.
+- Evitar `.globl` em arquivos incluídos com `.include`, a menos que seja realmente necessário.
+- Cada rotina deve ter um comentário curto de contrato antes da label.
+  O comentário deve dizer como usar a rotina: argumentos, retorno e estado global relevante quando importar.
+- Constantes compartilhadas ficam em `consts.s`.
+- Constantes muito específicas de uma entidade podem ficar junto da entidade quando fizer sentido.
+- A posição das entidades no mapa deve respeitar os dados exportados pelo editor.
+- Direção visual deve preferir flip horizontal no render em vez de duplicar sprites para esquerda e direita.
 
 # Imagens / Sprites
 

@@ -4,7 +4,6 @@
 .text
 
 # Função para renderizar o fundo
-.globl BACKGROUND_RENDER
 BACKGROUND_RENDER:
     # Inicializa os registradores necessários
     li t1, 0xFF000000          # Endereço inicial da memória VGA - Frame 0
