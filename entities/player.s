@@ -12,6 +12,7 @@ PLAYER_STATE:        .word PLAYER_STATE_IDLE
 PLAYER_SHOOT_TIMER:  .word 0
 PLAYER_SHOTS_ACTIVE: .word 0, 0, 0
 PLAYER_SHOTS_DIRECTION: .word 0, 0, 0
+PLAYER_SHOTS_VEL_Y:  .word 0, 0, 0
 PLAYER_SHOTS_X:      .half 0, 0, 0
 PLAYER_SHOTS_Y:      .half 0, 0, 0
 
@@ -52,6 +53,11 @@ PLAYER_SETUP:
     sw zero, 0(t0)
 
     la t0, PLAYER_SHOTS_ACTIVE
+    sw zero, 0(t0)
+    sw zero, 4(t0)
+    sw zero, 8(t0)
+
+    la t0, PLAYER_SHOTS_VEL_Y
     sw zero, 0(t0)
     sw zero, 4(t0)
     sw zero, 8(t0)
@@ -213,6 +219,7 @@ PLAYER_START_SHOOT:
     la t1, PLAYER_SHOTS_X
     la t2, PLAYER_SHOTS_Y
     la t3, PLAYER_SHOTS_DIRECTION
+    la a0, PLAYER_SHOTS_VEL_Y
     li t4, 0
     li t5, PLAYER_SHOTS_MAX
 
@@ -223,6 +230,7 @@ _PLAYER_START_SHOOT_FIND_SLOT:
     addi t1, t1, 2
     addi t2, t2, 2
     addi t3, t3, 4
+    addi a0, a0, 4
     addi t4, t4, 1
     blt t4, t5, _PLAYER_START_SHOOT_FIND_SLOT
     ret
@@ -252,6 +260,8 @@ _PLAYER_START_SHOOT_SAVE_X:
     lh t6, 2(t4)
     sh t6, 0(t2)
 
+    sw zero, 0(a0)
+
     la t0, PLAYER_SHOOT_TIMER
     li t1, PLAYER_SHOOT_DURATION
     sw t1, 0(t0)
@@ -260,7 +270,7 @@ _PLAYER_START_SHOOT_SAVE_X:
 # PLAYER_UPDATE_SHOTS
 # Atualiza timer de tiro e move/desativa projeteis ativos.
 PLAYER_UPDATE_SHOTS:
-    addi sp, sp, -28
+    addi sp, sp, -32
     sw   ra, 0(sp)
     sw   s1, 4(sp)
     sw   s2, 8(sp)
@@ -268,6 +278,7 @@ PLAYER_UPDATE_SHOTS:
     sw   s4, 16(sp)
     sw   s5, 20(sp)
     sw   s6, 24(sp)
+    sw   s7, 28(sp)
 
     la t0, PLAYER_SHOOT_TIMER
     lw t1, 0(t0)
@@ -281,7 +292,8 @@ _PLAYER_UPDATE_SHOTS_LOOP_SETUP:
     la s3, PLAYER_SHOTS_X
     la s4, PLAYER_SHOTS_Y
     la s5, PLAYER_SHOTS_DIRECTION
-    li s6, PLAYER_SHOTS_MAX
+    la s6, PLAYER_SHOTS_VEL_Y
+    li s7, PLAYER_SHOTS_MAX
 
 _PLAYER_UPDATE_SHOTS_LOOP:
     lw t0, 0(s2)
@@ -301,6 +313,45 @@ _PLAYER_UPDATE_SHOTS_RIGHT:
 
 _PLAYER_UPDATE_SHOTS_SAVE_X:
     sh t1, 0(s3)
+
+    lw t4, 0(s6)
+    add t2, t2, t4
+    sh t2, 0(s4)
+
+    mv a0, t1
+    mv a1, t2
+    call ENEMY1_HANDLE_SHOT_COLLISION
+    beqz a0, _PLAYER_UPDATE_SHOTS_CHECK_BOUNDS
+    li t0, 2
+    beq a0, t0, _PLAYER_UPDATE_SHOTS_DEACTIVATE
+
+    lw t3, 0(s5)
+    xori t3, t3, 1
+    sw t3, 0(s5)
+
+    lh t1, 0(s3)
+    beqz t3, _PLAYER_UPDATE_SHOTS_BOUNCE_RIGHT
+
+    li t4, PLAYER_SHOT_SPEED
+    sub t1, t1, t4
+    j _PLAYER_UPDATE_SHOTS_BOUNCE_SAVE_X
+
+_PLAYER_UPDATE_SHOTS_BOUNCE_RIGHT:
+    addi t1, t1, PLAYER_SHOT_SPEED
+
+_PLAYER_UPDATE_SHOTS_BOUNCE_SAVE_X:
+    sh t1, 0(s3)
+    li t4, PLAYER_SHOT_SPEED
+    sub t4, zero, t4
+    sw t4, 0(s6)
+    lw t4, 0(s6)
+    lh t2, 0(s4)
+    add t2, t2, t4
+    sh t2, 0(s4)
+
+_PLAYER_UPDATE_SHOTS_CHECK_BOUNDS:
+    lh t1, 0(s3)
+    lh t2, 0(s4)
 
     la t4, BG_POS
     lh t5, 0(t4)
@@ -324,6 +375,7 @@ _PLAYER_UPDATE_SHOTS_SAVE_X:
 
 _PLAYER_UPDATE_SHOTS_DEACTIVATE:
     sw zero, 0(s2)
+    sw zero, 0(s6)
 
 _PLAYER_UPDATE_SHOTS_NEXT:
     addi s1, s1, 1
@@ -331,8 +383,10 @@ _PLAYER_UPDATE_SHOTS_NEXT:
     addi s3, s3, 2
     addi s4, s4, 2
     addi s5, s5, 4
-    blt s1, s6, _PLAYER_UPDATE_SHOTS_LOOP
+    addi s6, s6, 4
+    blt s1, s7, _PLAYER_UPDATE_SHOTS_LOOP
 
+    lw   s7, 28(sp)
     lw   s6, 24(sp)
     lw   s5, 20(sp)
     lw   s4, 16(sp)
@@ -340,7 +394,7 @@ _PLAYER_UPDATE_SHOTS_NEXT:
     lw   s2, 8(sp)
     lw   s1, 4(sp)
     lw   ra, 0(sp)
-    addi sp, sp, 28
+    addi sp, sp, 32
     ret
 
 # PLAYER_SET_STATE
@@ -626,26 +680,12 @@ _PLAYER_RENDER_SHOTS_LOOP:
     mv s6, a0
     mv t1, a1
 
-    bltz s6, _PLAYER_RENDER_SHOTS_NEXT
-    li t2, SCREEN_W
-    li t3, PLAYER_SHOT_W
-    sub t2, t2, t3
-    bge s6, t2, _PLAYER_RENDER_SHOTS_NEXT
-
-    li t2, PLAYER_SHOT_H
-    sub t2, zero, t2
-    blt t1, t2, _PLAYER_RENDER_SHOTS_NEXT
-    li t2, SCREEN_H
-    li t3, PLAYER_SHOT_H
-    sub t2, t2, t3
-    bge t1, t2, _PLAYER_RENDER_SHOTS_NEXT
-
     la a0, PLAYER_SPRITE_SHOOT_PROJECTILE
     mv a1, s6
     mv a2, t1
     mv a3, s7
     li a4, 0
-    call PRINT
+    call PRINT_CLIPPED
 
 _PLAYER_RENDER_SHOTS_NEXT:
     addi s1, s1, 1

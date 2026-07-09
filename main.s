@@ -13,6 +13,7 @@
 .include "assets/sprites/player/megaman_frames.data"
 .include "assets/sprites/player/shoot.data"
 .include "assets/sprites/enemies/enemy1_frames.data"
+.include "assets/sprites/misc/dead_frames.data"
 
 BG_POS:     .half 0, 0
 OLD_BG_POS: .half 0, 0
@@ -40,6 +41,7 @@ UPDATE_GAME:
         sw   ra, 0(sp)
 
         call PLAYER_UPDATE
+        call ENEMY1_UPDATE
         call CAMERA_UPDATE
 
         lw   ra, 0(sp)
