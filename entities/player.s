@@ -259,10 +259,15 @@ PLAYER_GET_CURRENT_SPRITE:
 _PLAYER_GET_CURRENT_SPRITE_IDLE:
     la t0, PLAYER_ANIMATION_FRAME
     lw t2, 0(t0)
-    srli t2, t2, 3
-    andi t2, t2, 1
+    li t3, 96
+    rem t2, t2, t3
 
-    bnez t2, _PLAYER_GET_CURRENT_SPRITE_RIGHT
+    li t3, 4
+    blt t2, t3, _PLAYER_GET_CURRENT_SPRITE_IDLE_BLINK
+    la a0, PLAYER_SPRITE_IDLE
+    j _PLAYER_GET_CURRENT_SPRITE_DONE
+
+_PLAYER_GET_CURRENT_SPRITE_IDLE_BLINK:
     la a0, PLAYER_SPRITE_IDLE_BLINK
     j _PLAYER_GET_CURRENT_SPRITE_DONE
 
@@ -336,6 +341,7 @@ PLAYER_APPLY_VERTICAL_PHYSICS:
     la t0, PLAYER_POSITION
     lh a0, 0(t0)
     lh a1, 2(t0)
+    addi a0, a0, PLAYER_HITBOX_OFFSET_X
 
     la t2, PLAYER_VEL_Y
     lw a4, 0(t2)
@@ -346,7 +352,7 @@ PLAYER_APPLY_VERTICAL_PHYSICS:
     sub a1, a1, t3
     add a1, a1, a4
 
-    li a2, PLAYER_LARGURA
+    li a2, PLAYER_HITBOX_LARGURA
     li a3, PLAYER_ALTURA
     call PHYSICS_RESOLVE_VERTICAL_MAP_COLLISION
 
@@ -386,6 +392,7 @@ PLAYER_MOVE_RIGHT:
     la t0, PLAYER_POSITION
     lhu t1, 0(t0)
     addi t1, t1, 4
+    addi t1, t1, PLAYER_HITBOX_OFFSET_X
     lhu t2, 2(t0)
     li t3, TILE_H
     add t2, t2, t3
@@ -394,11 +401,13 @@ PLAYER_MOVE_RIGHT:
 
     mv a0, t1
     mv a1, t2
-    li a2, PLAYER_LARGURA
+    li a2, PLAYER_HITBOX_LARGURA
     li a3, PLAYER_ALTURA
     li a4, 1
     call PHYSICS_RESOLVE_HORIZONTAL_MAP_COLLISION
 
+    li t1, PLAYER_HITBOX_OFFSET_X
+    sub a0, a0, t1
     la t0, PLAYER_POSITION
     sh a0, 0(t0)
 
@@ -423,6 +432,7 @@ PLAYER_MOVE_LEFT:
     la t0, PLAYER_POSITION
     lhu t1, 0(t0)
     addi t1, t1, -4
+    addi t1, t1, PLAYER_HITBOX_OFFSET_X
     lhu t2, 2(t0)
     li t3, TILE_H
     add t2, t2, t3
@@ -431,11 +441,13 @@ PLAYER_MOVE_LEFT:
 
     mv a0, t1
     mv a1, t2
-    li a2, PLAYER_LARGURA
+    li a2, PLAYER_HITBOX_LARGURA
     li a3, PLAYER_ALTURA
     li a4, -1
     call PHYSICS_RESOLVE_HORIZONTAL_MAP_COLLISION
 
+    li t1, PLAYER_HITBOX_OFFSET_X
+    sub a0, a0, t1
     la t0, PLAYER_POSITION
     sh a0, 0(t0)
 
