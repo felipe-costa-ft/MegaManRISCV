@@ -12,6 +12,7 @@
 .include "assets/maps/MAPA1_visual.s"
 .include "assets/sprites/player/megaman_frames.data"
 .include "assets/sprites/player/shoot.data"
+.include "assets/sprites/enemies/enemy1_frames.data"
 
 BG_POS:     .half 0, 0
 OLD_BG_POS: .half 0, 0
@@ -21,6 +22,7 @@ OLD_BG_POS: .half 0, 0
 main:
         li s0, 0
         call PLAYER_SETUP
+        call ENEMY1_SETUP
 
 GAME_LOOP:
 
@@ -60,6 +62,9 @@ RENDER_FRAME:
 
         mv a3, s2
         call PLAYER_RENDER
+
+        mv a3, s2
+        call ENEMY1_RENDER
 
 
         lw s2, 4(sp)
@@ -101,3 +106,4 @@ WAIT_FRAME:
 .include "utils.s"
 
 .include "entities/player.s"
+.include "entities/enemy1.s"

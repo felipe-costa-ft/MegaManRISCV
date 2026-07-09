@@ -64,7 +64,127 @@ RENDER_ENTITY:
     addi a2, a2, TILE_H
     lw  t0, 4(a0)
     sub a2, a2, t0
-    j   PRINT
+    j   PRINT_CLIPPED
+
+
+# PRINT_CLIPPED: desenha imagem com clipping nas bordas da tela
+# a0 = imagem (.word largura, altura; depois pixels)
+# a1 = x na tela
+# a2 = y na tela
+# a3 = endereco base do framebuffer
+# a4 = 0 normal; diferente de 0 espelha horizontalmente
+PRINT_CLIPPED:
+    addi sp, sp, -36
+    sw   s0, 0(sp)
+    sw   s1, 4(sp)
+    sw   s2, 8(sp)
+    sw   s3, 12(sp)
+    sw   s4, 16(sp)
+    sw   s5, 20(sp)
+    sw   s6, 24(sp)
+    sw   s7, 28(sp)
+    sw   s8, 32(sp)
+
+    lw   s0, 0(a0)              # largura
+    lw   s1, 4(a0)              # altura
+
+    li   s2, 0                  # left_clip
+    bgez a1, _PRINT_CLIPPED_LEFT_OK
+    sub  s2, zero, a1
+_PRINT_CLIPPED_LEFT_OK:
+    li   t0, 0                  # right_clip
+    add  t1, a1, s0
+    li   t2, SCREEN_W
+    ble  t1, t2, _PRINT_CLIPPED_RIGHT_OK
+    sub  t0, t1, t2
+_PRINT_CLIPPED_RIGHT_OK:
+    sub  s3, s0, s2             # largura visivel
+    sub  s3, s3, t0
+    blez s3, _PRINT_CLIPPED_DONE
+
+    li   s4, 0                  # top_clip
+    bgez a2, _PRINT_CLIPPED_TOP_OK
+    sub  s4, zero, a2
+_PRINT_CLIPPED_TOP_OK:
+    li   t0, 0                  # bottom_clip
+    add  t1, a2, s1
+    li   t2, SCREEN_H
+    ble  t1, t2, _PRINT_CLIPPED_BOTTOM_OK
+    sub  t0, t1, t2
+_PRINT_CLIPPED_BOTTOM_OK:
+    sub  s5, s1, s4             # altura visivel
+    sub  s5, s5, t0
+    blez s5, _PRINT_CLIPPED_DONE
+
+    addi s6, a0, IMG_HEADER_BYTES
+    mul  t0, s4, s0
+    add  s6, s6, t0
+    bnez a4, _PRINT_CLIPPED_FLIP_SRC
+    add  s6, s6, s2
+    j    _PRINT_CLIPPED_DST
+_PRINT_CLIPPED_FLIP_SRC:
+    add  s6, s6, s0
+    addi s6, s6, -1
+    sub  s6, s6, s2
+
+_PRINT_CLIPPED_DST:
+    add  t0, a1, s2
+    add  t1, a2, s4
+    li   t2, SCREEN_W
+    mul  t1, t1, t2
+    add  s7, a3, t1
+    add  s7, s7, t0
+
+    mv   s8, s5
+    bnez a4, _PRINT_CLIPPED_FLIP_ROW
+
+_PRINT_CLIPPED_ROW:
+    mv   t0, s6
+    mv   t1, s7
+    mv   t2, s3
+_PRINT_CLIPPED_PIXEL:
+    lbu  t3, 0(t0)
+    sb   t3, 0(t1)
+    addi t0, t0, 1
+    addi t1, t1, 1
+    addi t2, t2, -1
+    bnez t2, _PRINT_CLIPPED_PIXEL
+    add  s6, s6, s0
+    li   t0, SCREEN_W
+    add  s7, s7, t0
+    addi s8, s8, -1
+    bnez s8, _PRINT_CLIPPED_ROW
+    j    _PRINT_CLIPPED_DONE
+
+_PRINT_CLIPPED_FLIP_ROW:
+    mv   t0, s6
+    mv   t1, s7
+    mv   t2, s3
+_PRINT_CLIPPED_FLIP_PIXEL:
+    lbu  t3, 0(t0)
+    sb   t3, 0(t1)
+    addi t0, t0, -1
+    addi t1, t1, 1
+    addi t2, t2, -1
+    bnez t2, _PRINT_CLIPPED_FLIP_PIXEL
+    add  s6, s6, s0
+    li   t0, SCREEN_W
+    add  s7, s7, t0
+    addi s8, s8, -1
+    bnez s8, _PRINT_CLIPPED_FLIP_ROW
+
+_PRINT_CLIPPED_DONE:
+    lw   s8, 32(sp)
+    lw   s7, 28(sp)
+    lw   s6, 24(sp)
+    lw   s5, 20(sp)
+    lw   s4, 16(sp)
+    lw   s3, 12(sp)
+    lw   s2, 8(sp)
+    lw   s1, 4(sp)
+    lw   s0, 0(sp)
+    addi sp, sp, 36
+    ret
 
 
 # RENDER_TILE: renderiza tile na posição x=a1, y=a2, framebuffer=a3

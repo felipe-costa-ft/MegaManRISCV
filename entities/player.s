@@ -167,11 +167,13 @@ _PLAYER_READ_INPUT_DONE:
 # PLAYER_SHOOT
 # Processa input de tiro pressionado neste frame.
 PLAYER_SHOOT:
-    addi sp, sp, -4
+    addi sp, sp, -8
     sw   ra, 0(sp)
+    sw   t4, 4(sp)
     call PLAYER_START_SHOOT
+    lw   t4, 4(sp)
     lw   ra, 0(sp)
-    addi sp, sp, 4
+    addi sp, sp, 8
     j _PLAYER_READ_INPUT_CHECK_JUMP
 
 # PLAYER_JUMP
