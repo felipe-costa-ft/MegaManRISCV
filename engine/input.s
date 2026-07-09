@@ -43,6 +43,24 @@
 .eqv SC_K 37
 .eqv SC_L 38
 
+# Scancodes observados em macOS para teclas ANSI.
+# Usados como alternativa no mesmo keymap para manter input continuo.
+.eqv SC_MAC_A 0
+.eqv SC_MAC_S 1
+.eqv SC_MAC_D 2
+.eqv SC_MAC_W 13
+.eqv SC_MAC_K 40
+
+# Mascaras do keymap PS/2 da FPGA (RISCV-v24).
+# A documentacao usa bit = scancode - 1 dentro do bloco KEYMAP correspondente.
+.eqv PS2_MASK_S 0x04000000  # 0x1B -> KEYMAP0 bit 26
+.eqv PS2_MASK_A 0x08000000  # 0x1C -> KEYMAP0 bit 27
+.eqv PS2_MASK_W 0x10000000  # 0x1D -> KEYMAP0 bit 28
+.eqv PS2_MASK_D 0x00000004  # 0x23 -> KEYMAP1 bit 2
+.eqv PS2_MASK_J 0x04000000  # 0x3B -> KEYMAP1 bit 26
+.eqv PS2_MASK_K 0x00000002  # 0x42 -> KEYMAP2 bit 1
+.eqv PS2_MASK_L 0x00000400  # 0x4B -> KEYMAP2 bit 10
+
 # ---------------------------------------------------------------------------
 # Dados
 # ---------------------------------------------------------------------------
@@ -122,6 +140,90 @@ READ_INPUT_CHECK_L:
         ori t4,t4,INPUT_SWITCH
 
 READ_INPUT_SAVE_CURRENT:
+        # macOS: usa o mesmo keymap continuo, mas com scancodes ANSI.
+        # Isso evita depender de repeticao de evento ASCII para movimento.
+        lbu t1,0(t0)
+
+        # A: scancode 0 -> byte 0, bit 0
+        andi t2,t1,0x01
+        beqz t2,READ_INPUT_CHECK_MAC_S
+        ori t4,t4,INPUT_LEFT
+
+READ_INPUT_CHECK_MAC_S:
+        # S: scancode 1 -> byte 0, bit 1
+        andi t2,t1,0x02
+        beqz t2,READ_INPUT_CHECK_MAC_D
+        ori t4,t4,INPUT_DOWN
+
+READ_INPUT_CHECK_MAC_D:
+        # D: scancode 2 -> byte 0, bit 2
+        andi t2,t1,0x04
+        beqz t2,READ_INPUT_CHECK_MAC_W
+        ori t4,t4,INPUT_RIGHT
+
+READ_INPUT_CHECK_MAC_W:
+        # W: scancode 13 -> byte 1, bit 5
+        lbu t1,1(t0)
+        andi t2,t1,0x20
+        beqz t2,READ_INPUT_CHECK_MAC_K
+        ori t4,t4,INPUT_UP
+
+READ_INPUT_CHECK_MAC_K:
+        # K: scancode 40 -> byte 5, bit 0
+        lbu t1,5(t0)
+        andi t2,t1,0x01
+        beqz t2,READ_INPUT_CHECK_PS2
+        ori t4,t4,INPUT_JUMP
+
+READ_INPUT_CHECK_PS2:
+        # FPGA PS/2: KeyMap0..3 guardam scancodes PS/2 em 128 bits.
+        # Bits conforme RISCV-v24.pdf.
+        lw t1,0(t0)          # KEYMAP0: scancodes 00 a 1F
+
+        li t2,PS2_MASK_S
+        and t3,t1,t2
+        beqz t3,READ_INPUT_CHECK_PS2_A
+        ori t4,t4,INPUT_DOWN
+
+READ_INPUT_CHECK_PS2_A:
+        li t2,PS2_MASK_A
+        and t3,t1,t2
+        beqz t3,READ_INPUT_CHECK_PS2_W
+        ori t4,t4,INPUT_LEFT
+
+READ_INPUT_CHECK_PS2_W:
+        li t2,PS2_MASK_W
+        and t3,t1,t2
+        beqz t3,READ_INPUT_CHECK_PS2_D
+        ori t4,t4,INPUT_UP
+
+READ_INPUT_CHECK_PS2_D:
+        lw t1,4(t0)          # KEYMAP1: scancodes 20 a 3F
+
+        andi t3,t1,PS2_MASK_D
+        beqz t3,READ_INPUT_CHECK_PS2_J
+        ori t4,t4,INPUT_RIGHT
+
+READ_INPUT_CHECK_PS2_J:
+        li t2,PS2_MASK_J
+        and t3,t1,t2
+        beqz t3,READ_INPUT_CHECK_PS2_K
+        ori t4,t4,INPUT_SHOOT
+
+READ_INPUT_CHECK_PS2_K:
+        lw t1,8(t0)          # KEYMAP2: scancodes 40 a 5F
+
+        andi t3,t1,PS2_MASK_K
+        beqz t3,READ_INPUT_CHECK_PS2_L
+        ori t4,t4,INPUT_JUMP
+
+READ_INPUT_CHECK_PS2_L:
+        li t2,PS2_MASK_L
+        and t3,t1,t2
+        beqz t3,READ_INPUT_STORE_CURRENT
+        ori t4,t4,INPUT_SWITCH
+
+READ_INPUT_STORE_CURRENT:
         la t0,INPUT_CURRENT
         sw t4,0(t0)
 
