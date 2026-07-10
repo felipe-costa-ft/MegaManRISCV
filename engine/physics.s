@@ -37,7 +37,7 @@ _PHYSICS_GET_COLLISION_TILE_EMPTY:
 # a0 = tile de colisao
 # retorna a0 = 1 se solido, 0 caso contrario
 PHYSICS_IS_SOLID_TILE:
-    li t0, 1
+    li t0, MAPA_COLLISION_SOLID
     beq a0, t0, _PHYSICS_IS_SOLID_TILE_TRUE
     li a0, 0
     ret
@@ -50,12 +50,25 @@ _PHYSICS_IS_SOLID_TILE_TRUE:
 # a0 = tile de colisao
 # retorna a0 = 1 se for escada, 0 caso contrario
 PHYSICS_IS_LADDER_TILE:
-    li t0, 2
+    li t0, MAPA_COLLISION_LADDER
     beq a0, t0, _PHYSICS_IS_LADDER_TILE_TRUE
     li a0, 0
     ret
 
 _PHYSICS_IS_LADDER_TILE_TRUE:
+    li a0, 1
+    ret
+
+# PHYSICS_IS_DOOR_TILE
+# a0 = tile de colisao
+# retorna a0 = 1 se for porta, 0 caso contrario
+PHYSICS_IS_DOOR_TILE:
+    li t0, MAPA_COLLISION_DOOR
+    beq a0, t0, _PHYSICS_IS_DOOR_TILE_TRUE
+    li a0, 0
+    ret
+
+_PHYSICS_IS_DOOR_TILE_TRUE:
     li a0, 1
     ret
 

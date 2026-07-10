@@ -48,15 +48,14 @@ CURRENT_MAP_COLISAO:        .word MAPA1_COLISAO
 CURRENT_MAP_PLAYER:         .word MAPA1_PLAYER
 CURRENT_MAP_INIMIGO1:       .word MAPA1_INIMIGO1
 CURRENT_MAP_INIMIGO1_COUNT: .word MAPA1_INIMIGO1_COUNT
+CURRENT_MAP_DESCRIPTOR:     .word MAPA1_DESCRIPTOR
 
 .text
 
 main:
         li s0, 0
         la a0, MAPA1_DESCRIPTOR
-        call MAP_SET_CURRENT
-        call PLAYER_SETUP
-        call ENEMY1_SETUP
+        call GAME_LOAD_MAP
 
 GAME_LOOP:
 
@@ -72,6 +71,9 @@ GAME_LOOP:
 # MAP_SET_CURRENT
 # a0 = endereco do descriptor do mapa
 MAP_SET_CURRENT:
+        la t3, CURRENT_MAP_DESCRIPTOR
+        sw a0, 0(t3)
+
         la t0, CURRENT_MAP_VISUAL
         li t1, MAP_DESC_SIZE
 _MAP_SET_CURRENT_LOOP:
@@ -85,12 +87,80 @@ _MAP_SET_CURRENT_LOOP:
 _MAP_SET_CURRENT_DONE:
         ret
 
+# GAME_LOAD_MAP
+# a0 = endereco do descriptor do mapa
+GAME_LOAD_MAP:
+        addi sp, sp, -4
+        sw   ra, 0(sp)
+
+        call MAP_SET_CURRENT
+
+        la t0, BG_POS
+        sh zero, 0(t0)
+        sh zero, 2(t0)
+        la t0, OLD_BG_POS
+        sh zero, 0(t0)
+        sh zero, 2(t0)
+
+        call PLAYER_SETUP
+        call ENEMY1_SETUP
+
+        lw   ra, 0(sp)
+        addi sp, sp, 4
+        ret
+
+# GAME_CHECK_MAP_TRANSITION
+# retorna a0 = 1 se trocou de mapa, 0 caso contrario
+GAME_CHECK_MAP_TRANSITION:
+        addi sp, sp, -4
+        sw   ra, 0(sp)
+
+        la t0, CURRENT_MAP_DESCRIPTOR
+        lw t1, 0(t0)
+        la t2, MAPA1_DESCRIPTOR
+        bne t1, t2, _GAME_CHECK_MAP_TRANSITION_FALSE
+
+        la t0, PLAYER_POSITION
+        lh a0, 0(t0)
+        li t1, PLAYER_HITBOX_OFFSET_X
+        add a0, a0, t1
+        li t1, PLAYER_HITBOX_LARGURA
+        srli t1, t1, 1
+        add a0, a0, t1
+
+        lh a1, 2(t0)
+        li t1, PLAYER_ALTURA
+        srli t1, t1, 1
+        add a1, a1, t1
+
+        call PHYSICS_GET_COLLISION_TILE
+        call PHYSICS_IS_DOOR_TILE
+        beqz a0, _GAME_CHECK_MAP_TRANSITION_FALSE
+
+        la a0, MAPA2_DESCRIPTOR
+        call GAME_LOAD_MAP
+        li a0, 1
+        j _GAME_CHECK_MAP_TRANSITION_DONE
+
+_GAME_CHECK_MAP_TRANSITION_FALSE:
+        li a0, 0
+
+_GAME_CHECK_MAP_TRANSITION_DONE:
+        lw   ra, 0(sp)
+        addi sp, sp, 4
+        ret
+
 UPDATE_GAME:
         addi sp, sp, -4
         sw   ra, 0(sp)
 
         call PLAYER_UPDATE
+        call GAME_CHECK_MAP_TRANSITION
+        bnez a0, _UPDATE_GAME_AFTER_TRANSITION
+
         call ENEMY1_UPDATE
+
+_UPDATE_GAME_AFTER_TRANSITION:
         call CAMERA_UPDATE
         # call MUSIC_UPDATE
 

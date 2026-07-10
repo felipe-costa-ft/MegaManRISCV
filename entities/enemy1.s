@@ -94,7 +94,7 @@ _ENEMY1_SETUP_LOOP:
 
     sw zero, ENEMY1_VEL_X_OFF(s2)
 
-
+    sw zero, ENEMY1_STATE_OFF(s2)
     sw zero, ENEMY1_FRAME_OFF(s2)
 
     li t0, 1
@@ -109,6 +109,7 @@ _ENEMY1_SETUP_LOOP:
     j _ENEMY1_SETUP_LOOP
 
 _ENEMY1_SETUP_LOOP_END:
+    call ENEMY1_CLEAR_TRANSIENT
 
     lw   s3, 16(sp)
     lw   s2, 12(sp)
@@ -116,6 +117,33 @@ _ENEMY1_SETUP_LOOP_END:
     lw   s0, 4(sp)
     lw   ra, 0(sp)
     addi sp, sp, 20
+    ret
+
+ENEMY1_CLEAR_TRANSIENT:
+    la t0, ENEMY1_SHOTS_ACTIVE
+    li t1, 0
+    li t2, ENEMY1_SHOTS_MAX
+
+_ENEMY1_CLEAR_SHOTS_LOOP:
+    beq t1, t2, _ENEMY1_CLEAR_DEAD_SETUP
+    sw zero, 0(t0)
+    addi t0, t0, 4
+    addi t1, t1, 1
+    j _ENEMY1_CLEAR_SHOTS_LOOP
+
+_ENEMY1_CLEAR_DEAD_SETUP:
+    la t0, ENEMY_DEAD_ACTIVE
+    li t1, 0
+    li t2, ENEMY_DEAD_EFFECTS_MAX
+
+_ENEMY1_CLEAR_DEAD_LOOP:
+    beq t1, t2, _ENEMY1_CLEAR_TRANSIENT_DONE
+    sw zero, 0(t0)
+    addi t0, t0, 4
+    addi t1, t1, 1
+    j _ENEMY1_CLEAR_DEAD_LOOP
+
+_ENEMY1_CLEAR_TRANSIENT_DONE:
     ret
 
 
