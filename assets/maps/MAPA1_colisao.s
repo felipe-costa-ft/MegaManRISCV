@@ -1,16 +1,16 @@
 # Gerado automaticamente pelo RITMO em 2026-06-22 12:44
 # Mapa: 32 colunas x 30 linhas, tile 16x16 pixels
-# Prefixo: MAPA1
+# Prefixo: MAPA2
 
-# .include "MAPA1_defs.s"
+# .include "MAPA2_defs.s"
 
 # Lookup (1 byte/tile):
-#   # t0 = row * MAPA1_MAP_COLS + col
-#   la  t1, MAPA1_COLISAO
+#   # t0 = row * MAPA2_MAP_COLS + col
+#   la  t1, MAPA2_COLISAO
 #   add t1, t1, t0
 #   lbu t1, 0(t1)
 
-MAPA1_COLISAO: .byte
+MAPA2_COLISAO: .byte
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,   # row 0
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,   # row 1
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,   # row 2

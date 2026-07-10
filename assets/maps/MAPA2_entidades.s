@@ -1,5 +1,5 @@
-# Gerado automaticamente pelo RITMO em 2026-06-22 12:44
-# Mapa: 32 colunas x 30 linhas, tile 16x16 pixels
+# Gerado automaticamente pelo RITMO em 2026-07-10 13:04
+# Mapa: 40 colunas x 30 linhas, tile 16x16 pixels
 # Prefixo: MAPA2
 
 .eqv MAPA2_ENTITY_POSITION_SIZE_BYTES 2
@@ -25,10 +25,10 @@
 # done_ent:
 
 MAPA2_PLAYER: .byte
-    2, 11
+    5, 11
 
 MAPA2_INIMIGO1: .byte
-    10, 11,
-    22, 11
+    17, 11,
+    31, 25
 
 # MAPA2_INIMIGO2: (nenhuma entidade definida)

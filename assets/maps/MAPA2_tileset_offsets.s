@@ -1,5 +1,5 @@
-# Gerado automaticamente pelo RITMO em 2026-06-22 12:44
-# Mapa: 32 colunas x 30 linhas, tile 16x16 pixels
+# Gerado automaticamente pelo RITMO em 2026-07-10 13:04
+# Mapa: 40 colunas x 30 linhas, tile 16x16 pixels
 # Prefixo: MAPA2
 
 # Offset (em bytes) do pixel superior-esquerdo de cada tile dentro

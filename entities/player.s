@@ -62,11 +62,11 @@ PLAYER_SETUP:
     sw zero, 4(t0)
     sw zero, 8(t0)
 
-    la a0, MAPA1_PLAYER
+    la a0, MAPA2_PLAYER
     la a1, PLAYER_POSITION
     call LOAD_ENTITY_POSITION
 
-    la a0, MAPA1_PLAYER
+    la a0, MAPA2_PLAYER
     la a1, PLAYER_OLD_POSITION
     call LOAD_ENTITY_POSITION
 

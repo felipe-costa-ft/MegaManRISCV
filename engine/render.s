@@ -228,7 +228,7 @@ _RENDER_TILE_CB_OK:
     addi t6, t6, IMG_HEADER_BYTES
 
     # endereco_offset = base_tabela + tile_id * 4
-    la   t1, MAPA1_TILESET_OFFSETS
+    la   t1, MAPA2_TILESET_OFFSETS
     slli t2, a0, 2  # a0 = tile_id
     add  t1, t1, t2
     lw   t1, 0(t1)  # offset em bytes no tileset

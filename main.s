@@ -5,11 +5,11 @@
 
 .include "consts.s"
 .include "assets/tileset/tileset.data"
-.include "assets/maps/MAPA1_defs.s"
-.include "assets/maps/MAPA1_tileset_offsets.s"
-.include "assets/maps/MAPA1_entidades.s"
-.include "assets/maps/MAPA1_colisao.s"
-.include "assets/maps/MAPA1_visual.s"
+.include "assets/maps/MAPA2_defs.s"
+.include "assets/maps/MAPA2_tileset_offsets.s"
+.include "assets/maps/MAPA2_entidades.s"
+.include "assets/maps/MAPA2_colisao.s"
+.include "assets/maps/MAPA2_visual.s"
 .include "assets/sprites/player/megaman_frames.data"
 .include "assets/sprites/player/shoot.data"
 .include "assets/sprites/enemies/enemy1_frames.data"
@@ -56,9 +56,9 @@ RENDER_FRAME:
         call GAME_GET_FRAMEBUFFER_ADDR
         mv s2, a0
 
-        la a0, MAPA1_VISUAL
-        li a1, MAPA1_MAP_COLS
-        li a2, MAPA1_MAP_ROWS
+        la a0, MAPA2_VISUAL
+        li a1, MAPA2_MAP_COLS
+        li a2, MAPA2_MAP_ROWS
         mv a3, s2
         call RENDER_MAPA
 
@@ -67,10 +67,6 @@ RENDER_FRAME:
 
         mv a3, s2
         call ENEMY1_RENDER
-
-
-        mv a3, s2
-        call HUD_RENDER
 
 
         lw s2, 4(sp)

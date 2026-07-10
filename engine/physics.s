@@ -15,15 +15,15 @@ PHYSICS_GET_COLLISION_TILE:
     srli t0, a0, TILE_W_SHIFT
     srli t1, a1, TILE_H_SHIFT
 
-    li   t2, MAPA1_MAP_COLS
+    li   t2, MAPA2_MAP_COLS
     bge  t0, t2, _PHYSICS_GET_COLLISION_TILE_EMPTY
 
-    li   t3, MAPA1_MAP_ROWS
+    li   t3, MAPA2_MAP_ROWS
     bge  t1, t3, _PHYSICS_GET_COLLISION_TILE_EMPTY
 
     mul  t3, t1, t2
     add  t3, t3, t0
-    la   t4, MAPA1_COLISAO
+    la   t4, MAPA2_COLISAO
     add  t4, t4, t3
     lbu  a0, 0(t4)
     ret

@@ -24,7 +24,10 @@ CAMERA_UPDATE:
     mv t1, t4
 
 _CAMERA_UPDATE_X_MAX:
-    li t4, BG_X_MAX
+    li t4, TILE_W
+    li t5, MAPA2_MAP_COLS
+    mul t4, t4, t5
+    addi t4, t4, -320
     ble t1, t4, _CAMERA_UPDATE_SAVE_X
     mv t1, t4
 
