@@ -85,8 +85,6 @@ _ENEMY1_SETUP_LOOP:
 
     sw zero, ENEMY1_VEL_X_OFF(s2)
 
-    # li t0, ENEMY1_STATE_PATROLLING
-    # sw t0, ENEMY1_STATE_OFF(s2)
 
     sw zero, ENEMY1_FRAME_OFF(s2)
 
