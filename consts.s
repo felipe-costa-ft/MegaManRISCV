@@ -12,7 +12,7 @@
 .eqv PLAYER_STATE_KNOCKBACK     7
 
 
-.eqv PLAYER_HP_MAX              28
+.eqv PLAYER_HP_MAX              10
 .eqv PLAYER_MP_MAX              28
 
 ESTA_INVULNERAVEL:      .word 0
@@ -73,3 +73,11 @@ KNOCKBACK_VEL_X:         .word 0
 .eqv BG_X_MAX  192
 .eqv BG_Y_MIN  0
 .eqv BG_Y_MAX  240
+
+# ===========================================================================
+# HUD
+# ===========================================================================
+
+.eqv HUD_LIFEBAR_X       8
+.eqv HUD_LIFEBAR_Y       8
+.eqv HUD_LIFEBAR_SEG_H   3

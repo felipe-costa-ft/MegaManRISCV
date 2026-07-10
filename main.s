@@ -14,6 +14,7 @@
 .include "assets/sprites/player/shoot.data"
 .include "assets/sprites/enemies/enemy1_frames.data"
 .include "assets/sprites/misc/dead_frames.data"
+.include "assets/sprites/hud/lifeBar.data"
 
 BG_POS:     .half 0, 0
 OLD_BG_POS: .half 0, 0
@@ -43,6 +44,7 @@ UPDATE_GAME:
         call PLAYER_UPDATE
         call ENEMY1_UPDATE
         call CAMERA_UPDATE
+        call MUSIC_UPDATE
 
         lw   ra, 0(sp)
         addi sp, sp, 4
@@ -68,6 +70,8 @@ RENDER_FRAME:
         mv a3, s2
         call ENEMY1_RENDER
 
+        mv a3, s2
+        call HUD_RENDER
 
         lw s2, 4(sp)
         lw ra, 0(sp)
@@ -105,7 +109,9 @@ WAIT_FRAME:
 .include "engine/physics.s"
 .include "engine/camera.s"
 .include "engine/animation.s"
+.include "engine/music.s"
 .include "utils.s"
+.include "hud.s"
 
 .include "entities/player.s"
 .include "entities/enemy1.s"
