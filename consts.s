@@ -11,6 +11,10 @@
 .eqv PLAYER_STATE_ATIRA_ESCADA  6
 .eqv PLAYER_STATE_KNOCKBACK     7
 
+
+.eqv PLAYER_HP_MAX              28
+.eqv PLAYER_MP_MAX              28
+
 ESTA_INVULNERAVEL:      .word 0
 INVULNERAVEL_TIMER:      .word 0
 INVULNERAVEL_DURACAO:    .word 2000   # 2s piscando após o dano
@@ -20,8 +24,7 @@ KNOCKBACK_DURACAO:       .word 350    # 350ms travado, sendo empurrado
 KNOCKBACK_VEL_X:         .word 0
 
 
-PLAYER_HP_MAX:          .byte 28
-PLAYER_MP_MAX:          .byte 28
+
 
 
 # ===========================================================================

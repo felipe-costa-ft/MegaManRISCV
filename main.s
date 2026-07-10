@@ -69,6 +69,10 @@ RENDER_FRAME:
         call ENEMY1_RENDER
 
 
+        mv a3, s2
+        call HUD_RENDER
+
+
         lw s2, 4(sp)
         lw ra, 0(sp)
         addi sp, sp, 8
