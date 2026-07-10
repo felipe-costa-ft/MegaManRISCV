@@ -16,6 +16,7 @@
 .include "assets/sprites/player/megaman_frames.data"
 .include "assets/sprites/player/shoot.data"
 .include "assets/sprites/enemies/enemy1_frames.data"
+.include "assets/sprites/enemies/enemy2_frames.data"
 .include "assets/sprites/misc/dead_frames.data"
 .include "assets/sprites/hud/lifeBar.data"
 
@@ -27,7 +28,9 @@ OLD_BG_POS: .half 0, 0
 .eqv MAP_DESC_PLAYER_OFF, 8
 .eqv MAP_DESC_INIMIGO1_OFF, 12
 .eqv MAP_DESC_INIMIGO1_COUNT_OFF, 16
-.eqv MAP_DESC_SIZE, 20
+.eqv MAP_DESC_INIMIGO2_OFF, 20
+.eqv MAP_DESC_INIMIGO2_COUNT_OFF, 24
+.eqv MAP_DESC_SIZE, 28
 
 MAPA1_DESCRIPTOR:
         .word MAPA1_VISUAL
@@ -35,6 +38,8 @@ MAPA1_DESCRIPTOR:
         .word MAPA1_PLAYER
         .word MAPA1_INIMIGO1
         .word MAPA1_INIMIGO1_COUNT
+        .word MAPA1_INIMIGO2
+        .word MAPA1_INIMIGO2_COUNT
 
 MAPA2_DESCRIPTOR:
         .word MAPA2_VISUAL
@@ -42,12 +47,16 @@ MAPA2_DESCRIPTOR:
         .word MAPA2_PLAYER
         .word MAPA2_INIMIGO1
         .word MAPA2_INIMIGO1_COUNT
+        .word MAPA2_INIMIGO2
+        .word MAPA2_INIMIGO2_COUNT
 
 CURRENT_MAP_VISUAL:         .word MAPA1_VISUAL
 CURRENT_MAP_COLISAO:        .word MAPA1_COLISAO
 CURRENT_MAP_PLAYER:         .word MAPA1_PLAYER
 CURRENT_MAP_INIMIGO1:       .word MAPA1_INIMIGO1
 CURRENT_MAP_INIMIGO1_COUNT: .word MAPA1_INIMIGO1_COUNT
+CURRENT_MAP_INIMIGO2:       .word MAPA1_INIMIGO2
+CURRENT_MAP_INIMIGO2_COUNT: .word MAPA1_INIMIGO2_COUNT
 CURRENT_MAP_DESCRIPTOR:     .word MAPA1_DESCRIPTOR
 
 .text
@@ -104,6 +113,7 @@ GAME_LOAD_MAP:
 
         call PLAYER_SETUP
         call ENEMY1_SETUP
+        call ENEMY2_SETUP
 
         lw   ra, 0(sp)
         addi sp, sp, 4
@@ -159,6 +169,7 @@ UPDATE_GAME:
         bnez a0, _UPDATE_GAME_AFTER_TRANSITION
 
         call ENEMY1_UPDATE
+        call ENEMY2_UPDATE
 
 _UPDATE_GAME_AFTER_TRANSITION:
         call CAMERA_UPDATE
@@ -188,6 +199,9 @@ RENDER_FRAME:
 
         mv a3, s2
         call ENEMY1_RENDER
+
+        mv a3, s2
+        call ENEMY2_RENDER
 
         mv a3, s2
         call HUD_RENDER
@@ -234,3 +248,4 @@ WAIT_FRAME:
 
 .include "entities/player.s"
 .include "entities/enemy1.s"
+.include "entities/enemy2.s"

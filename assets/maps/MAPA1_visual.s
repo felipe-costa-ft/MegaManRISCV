@@ -1,8 +1,8 @@
-# Gerado automaticamente pelo RITMO em 2026-07-10 16:20
+# Gerado automaticamente pelo RITMO em 2026-07-10 16:31
 # Mapa: 40 colunas x 30 linhas, tile 16x16 pixels
 # Prefixo: MAPA1
 
-# .include "MAPA1_defs.s"
+# .include "MAPA_defs.s"
 
 MAPA1_VISUAL: .byte
     37, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 37,   # row 0

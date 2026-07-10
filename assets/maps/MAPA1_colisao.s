@@ -1,11 +1,11 @@
-# Gerado automaticamente pelo RITMO em 2026-07-10 16:20
+# Gerado automaticamente pelo RITMO em 2026-07-10 16:31
 # Mapa: 40 colunas x 30 linhas, tile 16x16 pixels
 # Prefixo: MAPA1
 
-# .include "MAPA1_defs.s"
+# .include "MAPA_defs.s"
 
 # Lookup (1 byte/tile):
-#   # t0 = row * MAPA1_MAP_COLS + col
+#   # t0 = row * MAPA_MAP_COLS + col
 #   la  t1, MAPA1_COLISAO
 #   add t1, t1, t0
 #   lbu t1, 0(t1)
