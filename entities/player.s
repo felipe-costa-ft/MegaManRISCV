@@ -20,6 +20,7 @@ PLAYER_SHOTS_Y:      .half 0, 0, 0
 
 PLAYER_HP:        .byte PLAYER_HP_MAX
 PLAYER_MP:         .byte PLAYER_MP_MAX
+PLAYER_INVULN_BLINK_FRAME: .word 0
 
 .text
 
@@ -70,6 +71,17 @@ PLAYER_SETUP:
     sw zero, 4(t0)
     sw zero, 8(t0)
 
+    la t0, ESTA_INVULNERAVEL
+    sw zero, 0(t0)
+    la t0, INVULNERAVEL_TIMER
+    sw zero, 0(t0)
+    la t0, KNOCKBACK_TIMER
+    sw zero, 0(t0)
+    la t0, KNOCKBACK_VEL_X
+    sw zero, 0(t0)
+    la t0, PLAYER_INVULN_BLINK_FRAME
+    sw zero, 0(t0)
+
     la t0, CURRENT_MAP_PLAYER
     lw a0, 0(t0)
     la a1, PLAYER_POSITION
@@ -91,12 +103,14 @@ PLAYER_UPDATE:
     sw   ra, 0(sp)
 
     call PLAYER_SAVE_OLD_POSITION
+    call PLAYER_UPDATE_TIMERS
 
     la t0, PLAYER_IS_MOVING
     sw zero, 0(t0)
 
     call PLAYER_CHECK_LADDER
     call PLAYER_READ_INPUT
+    call PLAYER_APPLY_KNOCKBACK_MOVEMENT
     call PLAYER_APPLY_VERTICAL_PHYSICS
     call PLAYER_UPDATE_SHOTS
     call PLAYER_UPDATE_STATE
@@ -197,8 +211,20 @@ PLAYER_RENDER:
     lw a1, 8(sp)
     lw a2, 12(sp)
     lw a3, 4(sp)
+
+    la t0, ESTA_INVULNERAVEL
+    lw t1, 0(t0)
+    beqz t1, _PLAYER_RENDER_DRAW
+    la t0, PLAYER_INVULN_BLINK_FRAME
+    lw t1, 0(t0)
+    srli t1, t1, 2
+    andi t1, t1, 1
+    bnez t1, _PLAYER_RENDER_SKIP_DRAW
+
+_PLAYER_RENDER_DRAW:
     call RENDER_ENTITY
 
+_PLAYER_RENDER_SKIP_DRAW:
     lw a3, 4(sp)
     call PLAYER_RENDER_SHOTS
 
@@ -208,7 +234,12 @@ PLAYER_RENDER:
 
 # PLAYER_READ_INPUT
 # Le INPUT_CURRENT/INPUT_PRESSED e chama a acao do player.
+# Nao processa nada se o player estiver em knockback (controle travado).
 PLAYER_READ_INPUT:
+    la t0, PLAYER_STATE
+    lw t1, 0(t0)
+    li t2, PLAYER_STATE_KNOCKBACK
+    beq t1, t2, _PLAYER_READ_INPUT_KNOCKBACK_SKIP
 
     la   t0, INPUT_CURRENT
     lw   t1, 0(t0)
@@ -254,6 +285,9 @@ _PLAYER_READ_INPUT_CONTINUE:
     beq  t2, t3, PLAYER_MOVE_RIGHT
 
 _PLAYER_READ_INPUT_DONE:
+    ret
+
+_PLAYER_READ_INPUT_KNOCKBACK_SKIP:
     ret
 
 # PLAYER_SHOOT
@@ -562,8 +596,12 @@ PLAYER_UPDATE_STATE:
     la t0, PLAYER_STATE
     lw t1, 0(t0)
     li t2, PLAYER_STATE_KNOCKBACK
-    beq t1, t2, _PLAYER_UPDATE_STATE_DONE
+    bne t1, t2, _PLAYER_UPDATE_STATE_CONTINUE
+    la t3, KNOCKBACK_TIMER
+    lw t4, 0(t3)
+    bnez t4, _PLAYER_UPDATE_STATE_DONE
 
+_PLAYER_UPDATE_STATE_CONTINUE:
     la t0, PLAYER_IS_ON_LADDER
     lw t1, 0(t0)
     bnez t1, _PLAYER_UPDATE_STATE_LADDER
@@ -893,6 +931,183 @@ _PLAYER_APPLY_VERTICAL_PHYSICS_NORMAL:
 
     lw   ra, 0(sp)
     addi sp, sp, 4
+    ret
+
+
+# PLAYER_UPDATE_TIMERS
+# Decrementa os timers de invulnerabilidade e knockback (em ms, ~FRAME_MS
+# por frame) e limpa as flags/estado quando eles zeram.
+PLAYER_UPDATE_TIMERS:
+    la t0, INVULNERAVEL_TIMER
+    lw t1, 0(t0)
+    beqz t1, _PLAYER_UPDATE_TIMERS_KNOCKBACK
+
+    la t3, PLAYER_INVULN_BLINK_FRAME
+    lw t4, 0(t3)
+    addi t4, t4, 1
+    sw t4, 0(t3)
+
+    li t2, FRAME_MS
+    sub t1, t1, t2
+    bgtz t1, _PLAYER_UPDATE_TIMERS_SAVE_INVULN
+    li t1, 0
+    la t3, ESTA_INVULNERAVEL
+    sw zero, 0(t3)
+_PLAYER_UPDATE_TIMERS_SAVE_INVULN:
+    sw t1, 0(t0)
+
+_PLAYER_UPDATE_TIMERS_KNOCKBACK:
+    la t0, KNOCKBACK_TIMER
+    lw t1, 0(t0)
+    beqz t1, _PLAYER_UPDATE_TIMERS_DONE
+
+    li t2, FRAME_MS
+    sub t1, t1, t2
+    bgtz t1, _PLAYER_UPDATE_TIMERS_SAVE_KNOCKBACK
+    li t1, 0
+    la t3, KNOCKBACK_VEL_X
+    sw zero, 0(t3)
+_PLAYER_UPDATE_TIMERS_SAVE_KNOCKBACK:
+    sw t1, 0(t0)
+
+_PLAYER_UPDATE_TIMERS_DONE:
+    ret
+
+
+# PLAYER_APPLY_KNOCKBACK_MOVEMENT
+# Aplica KNOCKBACK_VEL_X como deslocamento horizontal (com colisao de mapa)
+# enquanto o player estiver sendo empurrado apos tomar dano.
+PLAYER_APPLY_KNOCKBACK_MOVEMENT:
+    la t0, KNOCKBACK_VEL_X
+    lw t1, 0(t0)
+    beqz t1, _PLAYER_APPLY_KNOCKBACK_MOVEMENT_DONE
+
+    addi sp, sp, -4
+    sw   ra, 0(sp)
+
+    li t5, 1
+    bgez t1, _PLAYER_APPLY_KNOCKBACK_MOVEMENT_DIR_OK
+    li t5, -1
+_PLAYER_APPLY_KNOCKBACK_MOVEMENT_DIR_OK:
+
+    la t0, PLAYER_POSITION
+    lhu t2, 0(t0)
+    add t2, t2, t1
+    addi t2, t2, PLAYER_HITBOX_OFFSET_X
+    lhu t3, 2(t0)
+    li t4, TILE_H
+    add t3, t3, t4
+    li t4, PLAYER_ALTURA
+    sub t3, t3, t4
+
+    mv a0, t2
+    mv a1, t3
+    li a2, PLAYER_HITBOX_LARGURA
+    li a3, PLAYER_ALTURA
+    mv a4, t5
+    call PHYSICS_RESOLVE_HORIZONTAL_MAP_COLLISION
+
+    li t1, PLAYER_HITBOX_OFFSET_X
+    sub a0, a0, t1
+    la t0, PLAYER_POSITION
+    sh a0, 0(t0)
+
+    lw   ra, 0(sp)
+    addi sp, sp, 4
+_PLAYER_APPLY_KNOCKBACK_MOVEMENT_DONE:
+    ret
+
+
+# PLAYER_HANDLE_ENEMY_SHOT_COLLISION
+# a0 = x do tiro inimigo no mundo, a1 = y do tiro inimigo no mundo
+# retorna a0 = 1 se atingiu o player (tiro deve ser desativado), 0 caso contrario
+# Enquanto invulneravel, nao verifica colisao (tiro atravessa sem efeito).
+PLAYER_HANDLE_ENEMY_SHOT_COLLISION:
+    addi sp, sp, -20
+    sw   ra, 0(sp)
+    sw   s0, 4(sp)
+    sw   s1, 8(sp)
+    sw   s2, 12(sp)
+    sw   s3, 16(sp)
+
+    la t0, ESTA_INVULNERAVEL
+    lw t1, 0(t0)
+    bnez t1, _PLAYER_HANDLE_ENEMY_SHOT_COLLISION_FALSE
+
+    mv s0, a0
+    mv s1, a1
+
+    la t0, PLAYER_POSITION
+    lh t2, 0(t0)
+    lh t3, 2(t0)
+
+    addi t4, t2, PLAYER_HITBOX_OFFSET_X
+    li   t5, PLAYER_HITBOX_LARGURA
+    add  t6, t4, t5
+
+    addi t5, s0, PLAYER_SHOT_W
+    bge t4, t5, _PLAYER_HANDLE_ENEMY_SHOT_COLLISION_FALSE
+    bge s0, t6, _PLAYER_HANDLE_ENEMY_SHOT_COLLISION_FALSE
+
+    li   t5, TILE_H
+    add  t5, t3, t5
+    li   t6, PLAYER_ALTURA
+    sub  t5, t5, t6
+    add  t6, t5, t6
+
+    addi t4, s1, PLAYER_SHOT_H
+    bge t5, t4, _PLAYER_HANDLE_ENEMY_SHOT_COLLISION_FALSE
+    bge s1, t6, _PLAYER_HANDLE_ENEMY_SHOT_COLLISION_FALSE
+
+    la t0, PLAYER_HP
+    lbu t1, 0(t0)
+    beqz t1, _PLAYER_HANDLE_ENEMY_SHOT_COLLISION_APPLY_STATUS
+    addi t1, t1, -1
+    sb t1, 0(t0)
+
+_PLAYER_HANDLE_ENEMY_SHOT_COLLISION_APPLY_STATUS:
+    la t0, ESTA_INVULNERAVEL
+    li t1, 1
+    sw t1, 0(t0)
+
+    la t0, INVULNERAVEL_TIMER
+    la t1, INVULNERAVEL_DURACAO
+    lw t1, 0(t1)
+    sw t1, 0(t0)
+
+    la t0, PLAYER_INVULN_BLINK_FRAME
+    sw zero, 0(t0)
+
+    la t0, KNOCKBACK_TIMER
+    la t1, KNOCKBACK_DURACAO
+    lw t1, 0(t1)
+    sw t1, 0(t0)
+
+    li t1, KNOCKBACK_SPEED
+    la t2, PLAYER_POSITION
+    lh t2, 0(t2)
+    blt s0, t2, _PLAYER_HANDLE_ENEMY_SHOT_COLLISION_PUSH_RIGHT
+    sub t1, zero, t1
+_PLAYER_HANDLE_ENEMY_SHOT_COLLISION_PUSH_RIGHT:
+    la t0, KNOCKBACK_VEL_X
+    sw t1, 0(t0)
+
+    li a0, PLAYER_STATE_KNOCKBACK
+    call PLAYER_SET_STATE
+
+    li a0, 1
+    j _PLAYER_HANDLE_ENEMY_SHOT_COLLISION_DONE
+
+_PLAYER_HANDLE_ENEMY_SHOT_COLLISION_FALSE:
+    li a0, 0
+
+_PLAYER_HANDLE_ENEMY_SHOT_COLLISION_DONE:
+    lw   s3, 16(sp)
+    lw   s2, 12(sp)
+    lw   s1, 8(sp)
+    lw   s0, 4(sp)
+    lw   ra, 0(sp)
+    addi sp, sp, 20
     ret
 
 

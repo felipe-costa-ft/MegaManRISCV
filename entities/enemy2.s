@@ -369,27 +369,47 @@ _ENEMY2_SPAWN_SHOT_FOUND:
     ret
 
 
+# ENEMY2_UPDATE_SHOTS
+# Move os tiros ativos, verifica colisao com o player (aplica dano) e
+# desativa por colisao ou saida de tela.
 ENEMY2_UPDATE_SHOTS:
-    la t0, ENEMY2_SHOTS_ACTIVE
-    la t1, ENEMY2_SHOTS_X
-    la t2, ENEMY2_SHOTS_Y
-    la t3, ENEMY2_SHOTS_VX
-    la t4, ENEMY2_SHOTS_VY
-    li t5, 0
+    addi sp, sp, -32
+    sw   ra, 0(sp)
+    sw   s1, 4(sp)
+    sw   s2, 8(sp)
+    sw   s3, 12(sp)
+    sw   s4, 16(sp)
+    sw   s5, 20(sp)
+    sw   s6, 24(sp)
+    sw   s7, 28(sp)
+
+    li s1, 0
+    la s2, ENEMY2_SHOTS_ACTIVE
+    la s3, ENEMY2_SHOTS_X
+    la s4, ENEMY2_SHOTS_Y
+    la s5, ENEMY2_SHOTS_VX
+    la s6, ENEMY2_SHOTS_VY
+    li s7, ENEMY2_SHOTS_MAX
 
 _ENEMY2_UPDATE_SHOTS_LOOP:
-    lw t6, 0(t0)
+    lw t6, 0(s2)
     beqz t6, _ENEMY2_UPDATE_SHOTS_NEXT
 
-    lh a0, 0(t1)
-    lw a2, 0(t3)
+    lh a0, 0(s3)
+    lw a2, 0(s5)
     add a0, a0, a2
-    sh a0, 0(t1)
+    sh a0, 0(s3)
 
-    lh a1, 0(t2)
-    lw a3, 0(t4)
+    lh a1, 0(s4)
+    lw a3, 0(s6)
     add a1, a1, a3
-    sh a1, 0(t2)
+    sh a1, 0(s4)
+
+    call PLAYER_HANDLE_ENEMY_SHOT_COLLISION
+    bnez a0, _ENEMY2_UPDATE_SHOTS_DEACTIVATE
+
+    lh a0, 0(s3)
+    lh a1, 0(s4)
 
     la a2, BG_POS
     lh a3, 0(a2)
@@ -410,17 +430,26 @@ _ENEMY2_UPDATE_SHOTS_LOOP:
     j _ENEMY2_UPDATE_SHOTS_NEXT
 
 _ENEMY2_UPDATE_SHOTS_DEACTIVATE:
-    sw zero, 0(t0)
+    sw zero, 0(s2)
 
 _ENEMY2_UPDATE_SHOTS_NEXT:
-    addi t0, t0, 4
-    addi t1, t1, 2
-    addi t2, t2, 2
-    addi t3, t3, 4
-    addi t4, t4, 4
-    addi t5, t5, 1
-    li t6, ENEMY2_SHOTS_MAX
-    blt t5, t6, _ENEMY2_UPDATE_SHOTS_LOOP
+    addi s1, s1, 1
+    addi s2, s2, 4
+    addi s3, s3, 2
+    addi s4, s4, 2
+    addi s5, s5, 4
+    addi s6, s6, 4
+    blt s1, s7, _ENEMY2_UPDATE_SHOTS_LOOP
+
+    lw   s7, 28(sp)
+    lw   s6, 24(sp)
+    lw   s5, 20(sp)
+    lw   s4, 16(sp)
+    lw   s3, 12(sp)
+    lw   s2, 8(sp)
+    lw   s1, 4(sp)
+    lw   ra, 0(sp)
+    addi sp, sp, 32
     ret
 
 

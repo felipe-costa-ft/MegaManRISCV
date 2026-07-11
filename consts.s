@@ -23,6 +23,9 @@ KNOCKBACK_TIMER:         .word 0
 KNOCKBACK_DURACAO:       .word 350    # 350ms travado, sendo empurrado
 KNOCKBACK_VEL_X:         .word 0
 
+.eqv KNOCKBACK_SPEED 2
+.eqv FRAME_MS 30   # aproximacao do tempo por frame (ver WAIT_FRAME), usado para decrementar os timers acima
+
 
 
 
