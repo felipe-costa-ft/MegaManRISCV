@@ -533,9 +533,14 @@ _ENEMY1_HANDLE_SHOT_COLLISION_LOOP:
 
     sw zero, ENEMY1_ALIVE_OFF(t0)
     sw zero, ENEMY1_VEL_X_OFF(t0)
-    lh a0, ENEMY1_X_OFF(t0)
-    lh a1, ENEMY1_Y_OFF(t0)
+    lh s0, ENEMY1_X_OFF(t0)
+    lh s1, ENEMY1_Y_OFF(t0)
+    mv a0, s0
+    mv a1, s1
     call ENEMY_DEAD_SPAWN
+    mv a0, s0
+    mv a1, s1
+    call ITEMS_TRY_SPAWN
     li a0, 2
     j _ENEMY1_HANDLE_SHOT_COLLISION_DONE
 

@@ -19,6 +19,7 @@
 .include "assets/sprites/enemies/enemy2_frames.data"
 .include "assets/sprites/enemies/boss_frames.data"
 .include "assets/sprites/misc/dead_frames.data"
+.include "assets/sprites/misc/items_frames.data"
 .include "assets/sprites/hud/lifeBar.data"
 
 BG_POS:     .half 0, 0
@@ -126,6 +127,7 @@ GAME_LOAD_MAP:
         call ENEMY1_SETUP
         call ENEMY2_SETUP
         call BOSS_SETUP
+        call ITEMS_SETUP
 
         lw   ra, 0(sp)
         addi sp, sp, 4
@@ -185,6 +187,8 @@ UPDATE_GAME:
 
         call BOSS_CHECK_RESTART
         bnez a0, _UPDATE_GAME_AFTER_TRANSITION
+
+        call ITEMS_UPDATE
 
         la t0, PLAYER_FREEZE_TIMER
         lw t1, 0(t0)
@@ -255,6 +259,9 @@ RENDER_FRAME:
         call BOSS_RENDER
 
         mv a3, s2
+        call ITEMS_RENDER
+
+        mv a3, s2
         call HUD_RENDER
 
         lw s2, 4(sp)
@@ -301,3 +308,4 @@ WAIT_FRAME:
 .include "entities/enemy1.s"
 .include "entities/enemy2.s"
 .include "entities/boss.s"
+.include "entities/items.s"
