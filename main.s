@@ -17,6 +17,7 @@
 .include "assets/sprites/player/shoot.data"
 .include "assets/sprites/enemies/enemy1_frames.data"
 .include "assets/sprites/enemies/enemy2_frames.data"
+.include "assets/sprites/enemies/boss_frames.data"
 .include "assets/sprites/misc/dead_frames.data"
 .include "assets/sprites/hud/lifeBar.data"
 
@@ -30,7 +31,9 @@ OLD_BG_POS: .half 0, 0
 .eqv MAP_DESC_INIMIGO1_COUNT_OFF, 16
 .eqv MAP_DESC_INIMIGO2_OFF, 20
 .eqv MAP_DESC_INIMIGO2_COUNT_OFF, 24
-.eqv MAP_DESC_SIZE, 28
+.eqv MAP_DESC_BOSS_OFF, 28
+.eqv MAP_DESC_BOSS_COUNT_OFF, 32
+.eqv MAP_DESC_SIZE, 36
 
 MAPA1_DESCRIPTOR:
         .word MAPA1_VISUAL
@@ -40,6 +43,8 @@ MAPA1_DESCRIPTOR:
         .word MAPA1_INIMIGO1_COUNT
         .word MAPA1_INIMIGO2
         .word MAPA1_INIMIGO2_COUNT
+        .word 0
+        .word 0
 
 MAPA2_DESCRIPTOR:
         .word MAPA2_VISUAL
@@ -49,6 +54,8 @@ MAPA2_DESCRIPTOR:
         .word MAPA2_INIMIGO1_COUNT
         .word MAPA2_INIMIGO2
         .word MAPA2_INIMIGO2_COUNT
+        .word MAPA2_BOSS
+        .word MAPA2_BOSS_COUNT
 
 CURRENT_MAP_VISUAL:         .word MAPA1_VISUAL
 CURRENT_MAP_COLISAO:        .word MAPA1_COLISAO
@@ -57,6 +64,8 @@ CURRENT_MAP_INIMIGO1:       .word MAPA1_INIMIGO1
 CURRENT_MAP_INIMIGO1_COUNT: .word MAPA1_INIMIGO1_COUNT
 CURRENT_MAP_INIMIGO2:       .word MAPA1_INIMIGO2
 CURRENT_MAP_INIMIGO2_COUNT: .word MAPA1_INIMIGO2_COUNT
+CURRENT_MAP_BOSS:           .word 0
+CURRENT_MAP_BOSS_COUNT:     .word 0
 CURRENT_MAP_DESCRIPTOR:     .word MAPA1_DESCRIPTOR
 
 .text
@@ -116,6 +125,7 @@ GAME_LOAD_MAP:
         call PLAYER_SETUP
         call ENEMY1_SETUP
         call ENEMY2_SETUP
+        call BOSS_SETUP
 
         lw   ra, 0(sp)
         addi sp, sp, 4
@@ -173,12 +183,16 @@ UPDATE_GAME:
         call GAME_CHECK_MAP_TRANSITION
         bnez a0, _UPDATE_GAME_AFTER_TRANSITION
 
+        call BOSS_CHECK_RESTART
+        bnez a0, _UPDATE_GAME_AFTER_TRANSITION
+
         la t0, PLAYER_FREEZE_TIMER
         lw t1, 0(t0)
         bnez t1, _UPDATE_GAME_AFTER_TRANSITION
 
         call ENEMY1_UPDATE
         call ENEMY2_UPDATE
+        call BOSS_UPDATE
 
 _UPDATE_GAME_AFTER_TRANSITION:
         call CAMERA_UPDATE
@@ -238,6 +252,9 @@ RENDER_FRAME:
         call ENEMY2_RENDER
 
         mv a3, s2
+        call BOSS_RENDER
+
+        mv a3, s2
         call HUD_RENDER
 
         lw s2, 4(sp)
@@ -283,3 +300,4 @@ WAIT_FRAME:
 .include "entities/player.s"
 .include "entities/enemy1.s"
 .include "entities/enemy2.s"
+.include "entities/boss.s"
