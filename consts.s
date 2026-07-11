@@ -17,14 +17,31 @@
 
 ESTA_INVULNERAVEL:      .word 0
 INVULNERAVEL_TIMER:      .word 0
-INVULNERAVEL_DURACAO:    .word 60
+INVULNERAVEL_DURACAO:    .word 1800
 
 KNOCKBACK_TIMER:         .word 0
-KNOCKBACK_DURACAO:       .word 12
+KNOCKBACK_DURACAO:       .word 360
 KNOCKBACK_VEL_X:         .word 0
 
-.eqv KNOCKBACK_SPEED 2
+.eqv KNOCKBACK_SPEED 4
+.eqv KNOCKBACK_VEL_Y -4
 .eqv FRAME_MS 30   # aproximacao do tempo por frame (ver WAIT_FRAME), usado para decrementar os timers acima
+
+.eqv PLAYER_WEAPON_NORMAL       0
+.eqv PLAYER_WEAPON_FREEZE       1
+.eqv PLAYER_WEAPON_HIGH_JUMP    2
+.eqv PLAYER_WEAPON_COUNT        3
+.eqv PLAYER_FREEZE_COLOR_ADD    32
+.eqv PLAYER_FREEZE_DURATION     90
+.eqv PLAYER_FREEZE_COST         14
+.eqv PLAYER_HIGH_JUMP_COLOR_ADD 64
+.eqv PLAYER_HIGH_JUMP_COST      2
+.eqv PLAYER_JUMP_VEL_NORMAL    -8
+.eqv PLAYER_JUMP_VEL_HIGH      -14
+.eqv PLAYER_BLUE_DARK           216
+.eqv PLAYER_BLUE_LIGHT          240
+
+RENDER_COLOR_ADD:       .word 0
 
 
 
@@ -84,3 +101,5 @@ KNOCKBACK_VEL_X:         .word 0
 .eqv HUD_LIFEBAR_X       8
 .eqv HUD_LIFEBAR_Y       8
 .eqv HUD_LIFEBAR_SEG_H   3
+.eqv HUD_ENERGYBAR_X     18
+.eqv HUD_ENERGY_COLOR    240

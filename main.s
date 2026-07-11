@@ -64,6 +64,7 @@ CURRENT_MAP_DESCRIPTOR:     .word MAPA1_DESCRIPTOR
 main:
         li s0, 0
         call PLAYER_RESET_HP
+        call PLAYER_RESET_MP
         la a0, MAPA1_DESCRIPTOR
         call GAME_LOAD_MAP
 
@@ -172,6 +173,10 @@ UPDATE_GAME:
         call GAME_CHECK_MAP_TRANSITION
         bnez a0, _UPDATE_GAME_AFTER_TRANSITION
 
+        la t0, PLAYER_FREEZE_TIMER
+        lw t1, 0(t0)
+        bnez t1, _UPDATE_GAME_AFTER_TRANSITION
+
         call ENEMY1_UPDATE
         call ENEMY2_UPDATE
 
@@ -194,6 +199,7 @@ GAME_CHECK_PLAYER_DEAD:
         bnez t1, _GAME_CHECK_PLAYER_DEAD_FALSE
 
         call PLAYER_RESET_HP
+        call PLAYER_RESET_MP
         la a0, MAPA1_DESCRIPTOR
         call GAME_LOAD_MAP
         li a0, 1

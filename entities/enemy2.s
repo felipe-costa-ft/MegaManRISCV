@@ -198,13 +198,6 @@ _ENEMY2_UPDATE_PATROL:
     mv a0, s0
     call ENEMY2_CHASE_PLAYER
 
-    lh a0, ENEMY2_X_OFF(s0)
-    addi a0, a0, ENEMY2_HITBOX_OFFSET_X
-    lh a1, ENEMY2_Y_OFF(s0)
-    li a2, ENEMY2_HITBOX_W
-    li a3, ENEMY2_HITBOX_H
-    call PLAYER_HANDLE_ENEMY_BODY_COLLISION
-
     lw t0, ENEMY2_FRAME_OFF(s0)
     addi t0, t0, 1
     sw t0, ENEMY2_FRAME_OFF(s0)

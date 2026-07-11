@@ -51,6 +51,7 @@
 .eqv SC_MAC_W 13
 .eqv SC_MAC_J 38
 .eqv SC_MAC_K 40
+.eqv SC_MAC_L 37
 
 # Mascaras do keymap PS/2 da FPGA (RISCV-v24).
 # A documentacao usa bit = scancode - 1 dentro do bloco KEYMAP correspondente.
@@ -130,15 +131,17 @@ READ_INPUT_CHECK_J:
 
 READ_INPUT_CHECK_K:
         # K: scancode 37 -> byte 4, bit 5
+        # No macOS esse mesmo bit e a tecla L; K e tratado no bloco macOS.
         andi t2,t1,0x20
         beqz t2,READ_INPUT_CHECK_L
-        ori t4,t4,INPUT_JUMP
+        ori t4,t4,INPUT_SWITCH
 
 READ_INPUT_CHECK_L:
         # L: scancode 38 -> byte 4, bit 6
+        # No macOS esse mesmo bit e a tecla J; por isso nao troca arma aqui.
         andi t2,t1,0x40
         beqz t2,READ_INPUT_SAVE_CURRENT
-        ori t4,t4,INPUT_SWITCH
+        ori t4,t4,INPUT_SHOOT
 
 READ_INPUT_SAVE_CURRENT:
         # macOS: usa o mesmo keymap continuo, mas com scancodes ANSI.

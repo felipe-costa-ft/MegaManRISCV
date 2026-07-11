@@ -245,17 +245,6 @@ _ENEMY1_UPDATE_PATROL_MOVE:
     mv a0, s0
     call ENEMY1_MOVE_PATROL
 
-    lh a0, ENEMY1_X_OFF(s0)
-    addi a0, a0, ENEMY1_HITBOX_OFFSET_X
-    lh a1, ENEMY1_Y_OFF(s0)
-    li t0, TILE_H
-    add a1, a1, t0
-    li t0, ENEMY1_HITBOX_H
-    sub a1, a1, t0
-    li a2, ENEMY1_HITBOX_W
-    li a3, ENEMY1_HITBOX_H
-    call PLAYER_HANDLE_ENEMY_BODY_COLLISION
-
     lw t0, ENEMY1_FRAME_OFF(s0)
     addi t0, t0, 1
     sw t0, ENEMY1_FRAME_OFF(s0)
@@ -442,9 +431,6 @@ _ENEMY1_UPDATE_SHOTS_LOOP:
     lw a3, 0(s6)
     add a1, a1, a3
     sh a1, 0(s4)
-
-    call PLAYER_HANDLE_ENEMY_SHOT_COLLISION
-    bnez a0, _ENEMY1_UPDATE_SHOTS_DEACTIVATE
 
     lh a0, 0(s3)
     lh a1, 0(s4)

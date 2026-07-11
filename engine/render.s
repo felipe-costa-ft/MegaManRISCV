@@ -74,7 +74,7 @@ RENDER_ENTITY:
 # a3 = endereco base do framebuffer
 # a4 = 0 normal; diferente de 0 espelha horizontalmente
 PRINT_CLIPPED:
-    addi sp, sp, -36
+    addi sp, sp, -40
     sw   s0, 0(sp)
     sw   s1, 4(sp)
     sw   s2, 8(sp)
@@ -84,9 +84,12 @@ PRINT_CLIPPED:
     sw   s6, 24(sp)
     sw   s7, 28(sp)
     sw   s8, 32(sp)
+    sw   s9, 36(sp)
 
     lw   s0, 0(a0)              # largura
     lw   s1, 4(a0)              # altura
+    la   t0, RENDER_COLOR_ADD
+    lw   s9, 0(t0)
 
     li   s2, 0                  # left_clip
     bgez a1, _PRINT_CLIPPED_LEFT_OK
@@ -144,6 +147,15 @@ _PRINT_CLIPPED_ROW:
     mv   t2, s3
 _PRINT_CLIPPED_PIXEL:
     lbu  t3, 0(t0)
+    beqz s9, _PRINT_CLIPPED_PIXEL_STORE
+    li   t4, PLAYER_BLUE_DARK
+    beq  t3, t4, _PRINT_CLIPPED_PIXEL_TINT
+    li   t4, PLAYER_BLUE_LIGHT
+    bne  t3, t4, _PRINT_CLIPPED_PIXEL_STORE
+_PRINT_CLIPPED_PIXEL_TINT:
+    add  t3, t3, s9
+    andi t3, t3, 0xFF
+_PRINT_CLIPPED_PIXEL_STORE:
     sb   t3, 0(t1)
     addi t0, t0, 1
     addi t1, t1, 1
@@ -162,6 +174,15 @@ _PRINT_CLIPPED_FLIP_ROW:
     mv   t2, s3
 _PRINT_CLIPPED_FLIP_PIXEL:
     lbu  t3, 0(t0)
+    beqz s9, _PRINT_CLIPPED_FLIP_PIXEL_STORE
+    li   t4, PLAYER_BLUE_DARK
+    beq  t3, t4, _PRINT_CLIPPED_FLIP_PIXEL_TINT
+    li   t4, PLAYER_BLUE_LIGHT
+    bne  t3, t4, _PRINT_CLIPPED_FLIP_PIXEL_STORE
+_PRINT_CLIPPED_FLIP_PIXEL_TINT:
+    add  t3, t3, s9
+    andi t3, t3, 0xFF
+_PRINT_CLIPPED_FLIP_PIXEL_STORE:
     sb   t3, 0(t1)
     addi t0, t0, -1
     addi t1, t1, 1
@@ -174,6 +195,7 @@ _PRINT_CLIPPED_FLIP_PIXEL:
     bnez s8, _PRINT_CLIPPED_FLIP_ROW
 
 _PRINT_CLIPPED_DONE:
+    lw   s9, 36(sp)
     lw   s8, 32(sp)
     lw   s7, 28(sp)
     lw   s6, 24(sp)
@@ -183,7 +205,7 @@ _PRINT_CLIPPED_DONE:
     lw   s2, 8(sp)
     lw   s1, 4(sp)
     lw   s0, 0(sp)
-    addi sp, sp, 36
+    addi sp, sp, 40
     ret
 
 

@@ -11,6 +11,8 @@ PLAYER_IS_ON_LADDER: .word 0
 PLAYER_LADDER_TOUCHING: .word 0
 PLAYER_LADDER_RELEASED: .word 0
 PLAYER_STATE:        .word PLAYER_STATE_IDLE
+PLAYER_WEAPON_MODE:  .word PLAYER_WEAPON_NORMAL
+PLAYER_FREEZE_TIMER: .word 0
 PLAYER_SHOOT_TIMER:  .word 0
 PLAYER_SHOTS_ACTIVE: .word 0, 0, 0
 PLAYER_SHOTS_DIRECTION: .word 0, 0, 0
@@ -33,6 +35,13 @@ PLAYER_SETUP:
     la t0, PLAYER_STATE
     li t1, PLAYER_STATE_IDLE
     sw t1, 0(t0)
+
+    la t0, PLAYER_WEAPON_MODE
+    li t1, PLAYER_WEAPON_NORMAL
+    sw t1, 0(t0)
+
+    la t0, PLAYER_FREEZE_TIMER
+    sw zero, 0(t0)
 
     la t0, PLAYER_DIRECTION
     sw zero, 0(t0)
@@ -104,6 +113,14 @@ PLAYER_RESET_HP:
     sb t1, 0(t0)
     ret
 
+# PLAYER_RESET_MP
+# Restaura a energia maxima do player.
+PLAYER_RESET_MP:
+    la t0, PLAYER_MP
+    li t1, PLAYER_MP_MAX
+    sb t1, 0(t0)
+    ret
+
 # PLAYER_UPDATE
 # Atualiza input, fisica e estado do player.
 PLAYER_UPDATE:
@@ -116,11 +133,13 @@ PLAYER_UPDATE:
     la t0, PLAYER_IS_MOVING
     sw zero, 0(t0)
 
+    call PLAYER_UPDATE_WEAPON_TIMERS
     call PLAYER_CHECK_LADDER
     call PLAYER_READ_INPUT
     call PLAYER_APPLY_KNOCKBACK_MOVEMENT
     call PLAYER_APPLY_VERTICAL_PHYSICS
     call PLAYER_UPDATE_SHOTS
+    call PLAYER_CHECK_DAMAGE_COLLISION
     call PLAYER_UPDATE_STATE
     call PLAYER_UPDATE_ANIMATION
 
@@ -259,6 +278,31 @@ _PLAYER_RENDER_BODY:
     sw a0, 16(sp)
     call PLAYER_GET_RENDER_FLAGS
 
+    la t0, PLAYER_WEAPON_MODE
+    lw t1, 0(t0)
+    li t2, PLAYER_WEAPON_FREEZE
+    beq t1, t2, _PLAYER_RENDER_FREEZE_COLOR
+    li t2, PLAYER_WEAPON_HIGH_JUMP
+    beq t1, t2, _PLAYER_RENDER_HIGH_JUMP_COLOR
+    j _PLAYER_RENDER_NORMAL_COLOR
+
+_PLAYER_RENDER_FREEZE_COLOR:
+    la t0, RENDER_COLOR_ADD
+    li t1, PLAYER_FREEZE_COLOR_ADD
+    sw t1, 0(t0)
+    j _PLAYER_RENDER_COLOR_READY
+
+_PLAYER_RENDER_HIGH_JUMP_COLOR:
+    la t0, RENDER_COLOR_ADD
+    li t1, PLAYER_HIGH_JUMP_COLOR_ADD
+    sw t1, 0(t0)
+    j _PLAYER_RENDER_COLOR_READY
+
+_PLAYER_RENDER_NORMAL_COLOR:
+    la t0, RENDER_COLOR_ADD
+    sw zero, 0(t0)
+
+_PLAYER_RENDER_COLOR_READY:
     mv a4, a0
     lw a0, 16(sp)
     lw a1, 8(sp)
@@ -278,6 +322,8 @@ _PLAYER_RENDER_DRAW:
     call RENDER_ENTITY
 
 _PLAYER_RENDER_SKIP_DRAW:
+    la t0, RENDER_COLOR_ADD
+    sw zero, 0(t0)
     lw a3, 4(sp)
     call PLAYER_RENDER_SHOTS
 
@@ -302,6 +348,10 @@ PLAYER_READ_INPUT:
     la  t0, INPUT_PRESSED
     lw  t4, 0(t0)
 
+    andi t5, t4, INPUT_SWITCH
+    bnez t5, PLAYER_SWITCH_WEAPON
+
+_PLAYER_READ_INPUT_CHECK_SHOOT:
     andi t5, t4, INPUT_SHOOT
     bnez t5, PLAYER_SHOOT
 
@@ -326,6 +376,9 @@ _PLAYER_READ_INPUT_CHECK_LADDER:
     ret
 
 _PLAYER_READ_INPUT_CONTINUE:
+    la   t0, INPUT_CURRENT
+    lw   t1, 0(t0)
+    andi t2, t1, 0x03    # INPUT_LEFT | INPUT_RIGHT
 
     li   t3, INPUT_LEFT
     ori  t3, t3, INPUT_RIGHT
@@ -343,17 +396,67 @@ _PLAYER_READ_INPUT_DONE:
 _PLAYER_READ_INPUT_KNOCKBACK_SKIP:
     ret
 
+# PLAYER_SWITCH_WEAPON
+# Alterna entre tiro padrao e habilidade de paralisar inimigos.
+PLAYER_SWITCH_WEAPON:
+    la t0, PLAYER_WEAPON_MODE
+    lw t1, 0(t0)
+    addi t1, t1, 1
+    li t2, PLAYER_WEAPON_COUNT
+    blt t1, t2, _PLAYER_SWITCH_WEAPON_SAVE
+    li t1, PLAYER_WEAPON_NORMAL
+
+_PLAYER_SWITCH_WEAPON_SAVE:
+    sw t1, 0(t0)
+
+    li t2, PLAYER_WEAPON_FREEZE
+    beq t1, t2, _PLAYER_READ_INPUT_CHECK_SHOOT
+
+_PLAYER_SWITCH_WEAPON_NORMAL:
+    la t0, PLAYER_FREEZE_TIMER
+    sw zero, 0(t0)
+    j _PLAYER_READ_INPUT_CHECK_SHOOT
+
 # PLAYER_SHOOT
 # Processa input de tiro pressionado neste frame.
 PLAYER_SHOOT:
     addi sp, sp, -8
     sw   ra, 0(sp)
     sw   t4, 4(sp)
+
+    la t0, PLAYER_WEAPON_MODE
+    lw t1, 0(t0)
+    li t2, PLAYER_WEAPON_FREEZE
+    beq t1, t2, _PLAYER_SHOOT_FREEZE
+
     call PLAYER_START_SHOOT
+    j _PLAYER_SHOOT_DONE
+
+_PLAYER_SHOOT_FREEZE:
+    call PLAYER_START_FREEZE
+
+_PLAYER_SHOOT_DONE:
     lw   t4, 4(sp)
     lw   ra, 0(sp)
     addi sp, sp, 8
     j _PLAYER_READ_INPUT_CHECK_JUMP
+
+# PLAYER_START_FREEZE
+# Ativa a paralisia temporaria dos inimigos.
+PLAYER_START_FREEZE:
+    la t0, PLAYER_MP
+    lbu t1, 0(t0)
+    li t2, PLAYER_FREEZE_COST
+    blt t1, t2, _PLAYER_START_FREEZE_DONE
+    sub t1, t1, t2
+    sb t1, 0(t0)
+
+    la t0, PLAYER_FREEZE_TIMER
+    li t1, PLAYER_FREEZE_DURATION
+    sw t1, 0(t0)
+
+_PLAYER_START_FREEZE_DONE:
+    ret
 
 # PLAYER_JUMP
 # Processa input de pulo (K) pressionado neste frame.
@@ -415,7 +518,23 @@ PLAYER_START_JUMP:
     li t1, 1
     sw t1, 0(t0)
 
-    li t1, -8
+    li t1, PLAYER_JUMP_VEL_NORMAL
+
+    la t2, PLAYER_WEAPON_MODE
+    lw t3, 0(t2)
+    li t4, PLAYER_WEAPON_HIGH_JUMP
+    bne t3, t4, _PLAYER_START_JUMP_SAVE_VEL
+
+    la t2, PLAYER_MP
+    lbu t3, 0(t2)
+    li t4, PLAYER_HIGH_JUMP_COST
+    blt t3, t4, _PLAYER_START_JUMP_SAVE_VEL
+    sub t3, t3, t4
+    sb t3, 0(t2)
+
+    li t1, PLAYER_JUMP_VEL_HIGH
+
+_PLAYER_START_JUMP_SAVE_VEL:
     la t0, PLAYER_VEL_Y
     sw t1, 0(t0)
 
@@ -733,6 +852,46 @@ _PLAYER_HAS_ACTIVE_SHOT_LOOP:
 
 _PLAYER_HAS_ACTIVE_SHOT_TRUE:
     li a0, 1
+    ret
+
+# PLAYER_UPDATE_WEAPON_TIMERS
+# Atualiza timers dos efeitos da arma selecionada.
+PLAYER_UPDATE_WEAPON_TIMERS:
+    la t0, PLAYER_FREEZE_TIMER
+    lw t1, 0(t0)
+    beqz t1, _PLAYER_UPDATE_WEAPON_TIMERS_DONE
+    addi t1, t1, -1
+    sw t1, 0(t0)
+
+_PLAYER_UPDATE_WEAPON_TIMERS_DONE:
+    ret
+
+# PLAYER_CHECK_DAMAGE_COLLISION
+# Mantem a colisao de dano centralizada no player.
+PLAYER_CHECK_DAMAGE_COLLISION:
+    addi sp, sp, -4
+    sw   ra, 0(sp)
+
+    la t0, ESTA_INVULNERAVEL
+    lw t1, 0(t0)
+    bnez t1, _PLAYER_CHECK_DAMAGE_COLLISION_DONE
+
+    call ENEMY1_CHECK_PLAYER_COLLISION
+    bnez a0, _PLAYER_CHECK_DAMAGE_COLLISION_HIT
+
+    call ENEMY2_CHECK_PLAYER_COLLISION
+    bnez a0, _PLAYER_CHECK_DAMAGE_COLLISION_HIT
+
+    call ENEMY1_CHECK_PLAYER_SHOT_COLLISION
+    beqz a0, _PLAYER_CHECK_DAMAGE_COLLISION_DONE
+
+_PLAYER_CHECK_DAMAGE_COLLISION_HIT:
+    mv a0, a1
+    call PLAYER_APPLY_HIT
+
+_PLAYER_CHECK_DAMAGE_COLLISION_DONE:
+    lw   ra, 0(sp)
+    addi sp, sp, 4
     ret
 
 # PLAYER_UPDATE_ANIMATION
@@ -1112,13 +1271,32 @@ _PLAYER_APPLY_HIT_STATUS:
     sw t1, 0(t0)
 
     li t1, KNOCKBACK_SPEED
+    li t3, 0
     la t2, PLAYER_POSITION
     lh t2, 0(t2)
     blt t6, t2, _PLAYER_APPLY_HIT_PUSH_RIGHT
     sub t1, zero, t1
+    li t3, 1
 _PLAYER_APPLY_HIT_PUSH_RIGHT:
     la t0, KNOCKBACK_VEL_X
     sw t1, 0(t0)
+
+    la t0, PLAYER_DIRECTION
+    sw t3, 0(t0)
+
+    la t0, PLAYER_VEL_Y
+    li t1, KNOCKBACK_VEL_Y
+    sw t1, 0(t0)
+
+    la t0, PLAYER_IS_IN_AIR
+    li t1, 1
+    sw t1, 0(t0)
+
+    la t0, PLAYER_IS_ON_LADDER
+    sw zero, 0(t0)
+
+    la t0, PLAYER_LADDER_RELEASED
+    sw zero, 0(t0)
 
     li a0, PLAYER_STATE_KNOCKBACK
     call PLAYER_SET_STATE
