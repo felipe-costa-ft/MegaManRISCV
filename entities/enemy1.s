@@ -353,6 +353,9 @@ _ENEMY1_SHOOT_RIGHT:
     li a3, ENEMY1_SHOT_SPEED
     call ENEMY1_SPAWN_SHOT
 
+    la a0, SFX_ENEMY_SHOOT
+    call SFX_PLAY
+
     lw   s3, 16(sp)
     lw   s2, 12(sp)
     lw   s1, 8(sp)
@@ -541,10 +544,14 @@ _ENEMY1_HANDLE_SHOT_COLLISION_LOOP:
     mv a0, s0
     mv a1, s1
     call ITEMS_TRY_SPAWN
+    la a0, SFX_ENEMY_HIT
+    call SFX_PLAY
     li a0, 2
     j _ENEMY1_HANDLE_SHOT_COLLISION_DONE
 
 _ENEMY1_HANDLE_SHOT_COLLISION_BOUNCE:
+    la a0, SFX_DINK
+    call SFX_PLAY
     li a0, 1
     j _ENEMY1_HANDLE_SHOT_COLLISION_DONE
 

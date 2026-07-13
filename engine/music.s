@@ -1,157 +1,95 @@
-# ===========================================================================
-# engine/music.s - Musica de fundo (nao bloqueante)
-# ===========================================================================
-# MUSIC_UPDATE deve ser chamada uma vez por frame. Ela nunca bloqueia o
-# jogo: cada nota tem uma duracao (ms) e a funcao so dispara a proxima
-# quando esse tempo (medido via syscall 30) tiver passado desde que a
-# nota atual comecou. O estado (indice da nota atual + timestamp de
-# inicio) fica guardado nas duas primeiras words de MUSIC_NOTAS.
-# ===========================================================================
-
+# Musica MIDI polifonica e nao bloqueante.
+# Cabecalho: count, pausa_final_ms. Evento (8 bytes):
+# delay_ms, duracao_ms, pitch, instrumento, volume, padding.
 .data
-
-# MUSIC_NOTAS
-# word0 = numero de notas
-# word1 = indice da nota atual (estado, mutavel)
-# word2 = timestamp (ms) de quando a nota atual comecou (estado, mutavel)
-# depois: um trio (altura, duracao_ms, 0) por nota
-MUSIC_NOTAS:
-    .word 76, 0, 0
-    .word 78, 125, 0
-    .word 77, 125, 0
-    .word 76, 125, 0
-    .word 76, 125, 0
-    .word 74, 125, 0
-    .word 73, 125, 0
-    .word 72, 125, 0
-    .word 73, 125, 0
-    .word 71, 125, 0
-    .word 70, 125, 0
-    .word 69, 125, 0
-    .word 67, 125, 0
-    .word 66, 125, 0
-    .word 65, 125, 0
-    .word 77, 500, 0
-    .word 77, 750, 0
-    .word 77, 500, 0
-    .word 77, 250, 0
-    .word 76, 1250, 0
-    .word 76, 250, 0
-    .word 74, 500, 0
-    .word 76, 500, 0
-    .word 72, 500, 0
-    .word 72, 250, 0
-    .word 76, 500, 0
-    .word 79, 500, 0
-    .word 77, 1000, 0
-    .word 77, 500, 0
-    .word 76, 250, 0
-    .word 79, 500, 0
-    .word 77, 1000, 0
-    .word 77, 250, 0
-    .word 76, 250, 0
-    .word 77, 1750, 0
-    .word 77, 250, 0
-    .word 79, 750, 0
-    .word 77, 500, 0
-    .word 76, 500, 0
-    .word 74, 500, 0
-    .word 74, 250, 0
-    .word 76, 250, 0
-    .word 74, 250, 0
-    .word 72, 1000, 0
-    .word 77, 500, 0
-    .word 77, 750, 0
-    .word 77, 500, 0
-    .word 77, 250, 0
-    .word 76, 1250, 0
-    .word 76, 250, 0
-    .word 74, 500, 0
-    .word 76, 500, 0
-    .word 72, 500, 0
-    .word 72, 250, 0
-    .word 76, 500, 0
-    .word 79, 500, 0
-    .word 77, 1000, 0
-    .word 77, 500, 0
-    .word 76, 250, 0
-    .word 79, 500, 0
-    .word 77, 1000, 0
-    .word 77, 250, 0
-    .word 76, 250, 0
-    .word 77, 1750, 0
-    .word 77, 250, 0
-    .word 79, 750, 0
-    .word 77, 500, 0
-    .word 76, 500, 0
-    .word 74, 500, 0
-    .word 74, 250, 0
-    .word 76, 250, 0
-    .word 74, 250, 0
-    .word 72, 1000, 0
-    .word 77, 500, 0
-    .word 77, 750, 0
-    .word 77, 500, 0
-    .word 77, 500, 0
+MUSIC_CURRENT:   .word 0
+MUSIC_INDEX:     .word 0
+MUSIC_NEXT_TIME: .word 0
 
 .text
-
-# MUSIC_UPDATE
-# Sem argumentos, sem retorno. Chamar uma vez por frame.
-MUSIC_UPDATE:
-    addi sp, sp, -28
-    sw   ra, 0(sp)
-    sw   s1, 4(sp)
-    sw   s2, 8(sp)
-    sw   s3, 12(sp)
-    sw   s4, 16(sp)
-    sw   s5, 20(sp)
-    sw   s6, 24(sp)
-
-    la  s1, MUSIC_NOTAS
-    lw  s2, 0(s1)           # total de notas
-    lw  s3, 4(s1)           # indice da nota atual
-    lw  s4, 8(s1)           # timestamp de inicio da nota atual
-
-    li  t0, 12
-    mul s5, t0, s3
-    add s5, s5, s1           # s5 = &MUSIC_NOTAS[s3]
-
-    li  a7, 30
-    ecall                     # a0 = tempo atual (ms)
-    sub s6, a0, s4            # tempo decorrido desde o inicio da nota
-
-    lw  t1, 4(s5)             # duracao da nota atual
-    bgtu t1, s6, _MUSIC_UPDATE_DONE   # ainda nao acabou, nada a fazer
-
-    bne s3, s2, _MUSIC_UPDATE_NEXT
-    li  s3, 0
-    mv  s5, s1
-
-_MUSIC_UPDATE_NEXT:
-    addi s5, s5, 12
-
-    li  a7, 31
-    lw  a0, 0(s5)
-    lw  a1, 4(s5)
-    li  a2, 7                # instrumento (hardware aceita 0 a 15) - Clavinet, timbre tipo baixo
-    li  a3, 60
-    ecall                     # dispara a nota (nao bloqueia)
-
-    li  a7, 30
+# a0 = tabela da musica
+MUSIC_SET_SONG:
+    addi sp,sp,-8
+    sw ra,0(sp)
+    sw s1,4(sp)
+    mv s1,a0
+    la t0,MUSIC_CURRENT
+    sw s1,0(t0)
+    la t0,MUSIC_INDEX
+    sw zero,0(t0)
+    li a7,30
     ecall
-    sw  a0, 8(s1)             # salva novo timestamp de inicio
+    lhu t1,8(s1)
+    add t1,a0,t1
+    la t0,MUSIC_NEXT_TIME
+    sw t1,0(t0)
+    lw s1,4(sp)
+    lw ra,0(sp)
+    addi sp,sp,8
+    ret
 
-    addi s3, s3, 1
-    sw  s3, 4(s1)             # salva novo indice
+MUSIC_STOP:
+    la t0,MUSIC_CURRENT
+    sw zero,0(t0)
+    ret
 
+MUSIC_UPDATE:
+    addi sp,sp,-16
+    sw ra,0(sp)
+    sw s1,4(sp)
+    sw s2,8(sp)
+    sw s3,12(sp)
+    la t0,MUSIC_CURRENT
+    lw s1,0(t0)
+    beqz s1,_MUSIC_UPDATE_DONE
+    la t0,MUSIC_INDEX
+    lw s2,0(t0)
+    la t0,MUSIC_NEXT_TIME
+    lw s3,0(t0)
+
+_MUSIC_UPDATE_DUE_LOOP:
+    li a7,30
+    ecall
+    sub t0,a0,s3
+    bltz t0,_MUSIC_UPDATE_SAVE
+
+    slli t0,s2,3
+    addi t0,t0,8
+    add t0,s1,t0
+    lbu a0,4(t0)
+    lhu a1,2(t0)
+    lbu a2,5(t0)
+    lbu a3,6(t0)
+    li a7,31
+    ecall
+
+    addi s2,s2,1
+    lw t1,0(s1)
+    blt s2,t1,_MUSIC_UPDATE_NEXT_EVENT
+    li s2,0
+    lw t1,4(s1)
+    add s3,s3,t1
+    lhu t1,8(s1)
+    add s3,s3,t1
+    j _MUSIC_UPDATE_DUE_LOOP
+
+_MUSIC_UPDATE_NEXT_EVENT:
+    slli t0,s2,3
+    addi t0,t0,8
+    add t0,s1,t0
+    lhu t1,0(t0)
+    add s3,s3,t1
+    j _MUSIC_UPDATE_DUE_LOOP
+
+_MUSIC_UPDATE_SAVE:
+    la t0,MUSIC_INDEX
+    sw s2,0(t0)
+    la t0,MUSIC_NEXT_TIME
+    sw s3,0(t0)
 _MUSIC_UPDATE_DONE:
-    lw   s6, 24(sp)
-    lw   s5, 20(sp)
-    lw   s4, 16(sp)
-    lw   s3, 12(sp)
-    lw   s2, 8(sp)
-    lw   s1, 4(sp)
-    lw   ra, 0(sp)
-    addi sp, sp, 28
+    lw s3,12(sp)
+    lw s2,8(sp)
+    lw s1,4(sp)
+    lw ra,0(sp)
+    addi sp,sp,16
     ret

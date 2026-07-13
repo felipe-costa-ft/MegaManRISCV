@@ -122,7 +122,7 @@ _BOSS_CLEAR_SHOTS_DONE:
     ret
 
 # BOSS_CHECK_RESTART
-# retorna a0 = 1 se reiniciou o jogo apos a morte do boss.
+# retorna a0 = 1 quando termina a espera apos a morte do boss.
 BOSS_CHECK_RESTART:
     addi sp, sp, -4
     sw   ra, 0(sp)
@@ -135,10 +135,6 @@ BOSS_CHECK_RESTART:
     sw t1, 0(t0)
     bnez t1, _BOSS_CHECK_RESTART_FALSE
 
-    call PLAYER_RESET_HP
-    call PLAYER_RESET_MP
-    la a0, MAPA1_DESCRIPTOR
-    call GAME_LOAD_MAP
     li a0, 1
     j _BOSS_CHECK_RESTART_DONE
 
@@ -466,6 +462,9 @@ _BOSS_SHOOT_RIGHT:
     li a3, 2
     call BOSS_SPAWN_SHOT
 
+    la a0, SFX_ENEMY_SHOOT
+    call SFX_PLAY
+
     lw   s3, 12(sp)
     lw   s2, 8(sp)
     lw   s1, 4(sp)
@@ -609,6 +608,8 @@ BOSS_HANDLE_SHOT_COLLISION:
     sw t1, 0(t0)
 
 _BOSS_HANDLE_SHOT_COLLISION_HIT:
+    la a0, SFX_ENEMY_HIT
+    call SFX_PLAY
     li a0, 2
     j _BOSS_HANDLE_SHOT_COLLISION_DONE
 
