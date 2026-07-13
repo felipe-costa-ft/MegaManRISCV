@@ -113,10 +113,6 @@ RENDER_COLOR_ADD:       .word 0
 # SFX (ecall 31: a0=nota MIDI, a1=duracao ms, a2=instrumento 0-15, a3=volume)
 # ===========================================================================
 
-.eqv SFX_SHOOT_NOTE        36  # C2, grave pra soar como baixo
-.eqv SFX_SHOOT_DURATION    70
-.eqv SFX_SHOOT_INSTRUMENT  7   # Clavinet (mais proximo de baixo dentro do 0-15)
-.eqv SFX_SHOOT_VOLUME      100
 
 .eqv SFX_ENEMY_DEAD_NOTE       43   # G2, grave pra soar como impacto
 .eqv SFX_ENEMY_DEAD_DURATION   180

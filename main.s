@@ -5,6 +5,8 @@
 
 .include "consts.s"
 .include "assets/tileset/tileset.data"
+.include "assets/music/woodman.data"
+.include "assets/music/heatman.data"
 .include "assets/maps/MAPA_defs.s"
 .include "assets/maps/MAPA_tileset_offsets.s"
 .include "assets/maps/MAPA1_entidades.s"
@@ -95,6 +97,9 @@ GAME_LOOP:
 
         call READ_INPUT
         call GAME_UPDATE_STATE
+        # Mantem efeitos iniciados no ultimo frame ativos inclusive durante
+        # a transicao para Game Over.
+        call SFX_UPDATE
         call GAME_RENDER_STATE
         call PRESENT_FRAME
         call SWAP_FRAMEBUFFER
@@ -103,6 +108,9 @@ GAME_LOOP:
         j GAME_LOOP
 
 GAME_ENTER_TITLE:
+        addi sp, sp, -4
+        sw ra, 0(sp)
+        call MUSIC_STOP
         la t0, GAME_STATE
         li t1, GAME_STATE_TITLE
         sw t1, 0(t0)
@@ -113,6 +121,8 @@ GAME_ENTER_TITLE:
         la t0, BG_POS
         sh zero, 0(t0)
         sh zero, 2(t0)
+        lw ra, 0(sp)
+        addi sp, sp, 4
         ret
 
 GAME_START_PLAYING:
@@ -130,6 +140,9 @@ GAME_START_PLAYING:
         ret
 
 GAME_ENTER_GAMEOVER:
+        addi sp, sp, -4
+        sw ra, 0(sp)
+        call MUSIC_STOP
         la t0, GAME_STATE
         li t1, GAME_STATE_GAMEOVER
         sw t1, 0(t0)
@@ -139,6 +152,8 @@ GAME_ENTER_GAMEOVER:
         la t0, BG_POS
         sh zero, 0(t0)
         sh zero, 2(t0)
+        lw ra, 0(sp)
+        addi sp, sp, 4
         ret
 
 GAME_UPDATE_STATE:
@@ -218,6 +233,18 @@ GAME_LOAD_MAP:
         call ENEMY2_SETUP
         call BOSS_SETUP
         call ITEMS_SETUP
+
+        la t0, CURRENT_MAP_DESCRIPTOR
+        lw t1, 0(t0)
+        la t2, MAPA1_DESCRIPTOR
+        bne t1, t2, _GAME_LOAD_MAP_HEATMAN
+        la a0, MUSIC_WOODMAN
+        call MUSIC_SET_SONG
+        j _GAME_LOAD_MAP_MUSIC_DONE
+_GAME_LOAD_MAP_HEATMAN:
+        la a0, MUSIC_HEATMAN
+        call MUSIC_SET_SONG
+_GAME_LOAD_MAP_MUSIC_DONE:
 
         lw   ra, 0(sp)
         addi sp, sp, 4
@@ -304,13 +331,7 @@ _UPDATE_GAME_AFTER_TRANSITION:
 
         call CAMERA_UPDATE
 
-        # O build fpga.s define gp=0; nos simuladores ele aponta para extern.
-        # O FPGRARS local nao implementa MIDI (ecall 31), enquanto o
-        # SYSTEMv24 atende esse servico no hardware.
-        bnez gp, _UPDATE_GAME_SKIP_MUSIC
         call MUSIC_UPDATE
-
-_UPDATE_GAME_SKIP_MUSIC:
 
 _UPDATE_GAME_DONE:
 
@@ -471,6 +492,7 @@ WAIT_FRAME:
 .include "engine/camera.s"
 .include "engine/animation.s"
 .include "engine/music.s"
+.include "engine/sfx.s"
 .include "utils.s"
 .include "hud.s"
 

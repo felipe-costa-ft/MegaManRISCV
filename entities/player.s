@@ -455,6 +455,9 @@ PLAYER_START_FREEZE:
     li t1, PLAYER_FREEZE_DURATION
     sw t1, 0(t0)
 
+    la a0, SFX_TIME_STOPPER
+    call SFX_PLAY
+
 _PLAYER_START_FREEZE_DONE:
     ret
 
@@ -595,13 +598,10 @@ _PLAYER_START_SHOOT_SAVE_X:
     li t1, PLAYER_SHOOT_DURATION
     sw t1, 0(t0)
 
-    li a7, 31
-    li a0, SFX_SHOOT_NOTE
-    li a1, SFX_SHOOT_DURATION
-    li a2, SFX_SHOOT_INSTRUMENT
-    li a3, SFX_SHOOT_VOLUME
-    ecall
-    ret
+    # Tail call: SFX_PLAY retorna diretamente para quem chamou
+    # PLAYER_START_SHOOT, sem exigir uma pilha adicional nesta rotina.
+    la a0, SFX_BUSTER
+    j SFX_PLAY
 
 # PLAYER_UPDATE_SHOTS
 # Atualiza timer de tiro e move/desativa projeteis ativos.
@@ -1330,6 +1330,9 @@ _PLAYER_APPLY_HIT_PUSH_RIGHT:
 
     li a0, PLAYER_STATE_KNOCKBACK
     call PLAYER_SET_STATE
+
+    la a0, SFX_PLAYER_HIT
+    call SFX_PLAY
 
     lw   ra, 0(sp)
     addi sp, sp, 4

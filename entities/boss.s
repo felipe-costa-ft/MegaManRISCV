@@ -462,6 +462,9 @@ _BOSS_SHOOT_RIGHT:
     li a3, 2
     call BOSS_SPAWN_SHOT
 
+    la a0, SFX_ENEMY_SHOOT
+    call SFX_PLAY
+
     lw   s3, 12(sp)
     lw   s2, 8(sp)
     lw   s1, 4(sp)
@@ -605,6 +608,8 @@ BOSS_HANDLE_SHOT_COLLISION:
     sw t1, 0(t0)
 
 _BOSS_HANDLE_SHOT_COLLISION_HIT:
+    la a0, SFX_ENEMY_HIT
+    call SFX_PLAY
     li a0, 2
     j _BOSS_HANDLE_SHOT_COLLISION_DONE
 
