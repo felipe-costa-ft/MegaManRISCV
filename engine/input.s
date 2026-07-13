@@ -30,6 +30,7 @@
 .eqv INPUT_SHOOT  0x10    # Tecla 'j' - disparar
 .eqv INPUT_JUMP   0x20    # Tecla 'k' - pular
 .eqv INPUT_SWITCH 0x40    # Tecla 'l' - trocar arma
+.eqv INPUT_ENTER  0x80    # Enter - iniciar o jogo
 
 .eqv KEYMAP_ADDR 0xFF200520
 
@@ -68,6 +69,7 @@
 .eqv PS2_MASK_J 0x08000000  # 0x3B -> KEYMAP1 bit 27
 .eqv PS2_MASK_K 0x00000004  # 0x42 -> KEYMAP2 bit 2
 .eqv PS2_MASK_L 0x00000800  # 0x4B -> KEYMAP2 bit 11
+.eqv PS2_MASK_ENTER 0x04000000 # 0x5A -> KEYMAP2 bit 26
 
 # ---------------------------------------------------------------------------
 # Dados
@@ -128,7 +130,7 @@ READ_INPUT:
         and t3,t1,t2
         bnez t3,READ_INPUT_SELECT_FPGA
         lw t1,8(t0)
-        li t2,0x00000804     # K, L
+        li t2,0x04000804     # K, L, Enter
         and t3,t1,t2
         bnez t3,READ_INPUT_SELECT_FPGA
 
@@ -142,13 +144,16 @@ READ_INPUT:
         lbu t1,5(t0)
         andi t3,t1,0x01
         bnez t3,READ_INPUT_SELECT_MACOS
+        lbu t1,4(t0)
+        andi t3,t1,0x10      # Enter (ANSI 36)
+        bnez t3,READ_INPUT_SELECT_MACOS
 
         # Linux: W, A/S/D e J tambem permitem identificar o backend.
         lbu t1,2(t0)
         andi t3,t1,0x02
         bnez t3,READ_INPUT_SELECT_LINUX
         lbu t1,3(t0)
-        andi t3,t1,0xC0
+        andi t3,t1,0xD0      # A, S, Enter
         bnez t3,READ_INPUT_SELECT_LINUX
         lbu t1,4(t0)
         andi t3,t1,0x11      # D, J
@@ -224,8 +229,15 @@ READ_INPUT_CHECK_K:
 READ_INPUT_CHECK_L:
         # L: scancode 38 -> byte 4, bit 6
         andi t2,t1,0x40
-        beqz t2,READ_INPUT_STORE_CURRENT
+        beqz t2,READ_INPUT_CHECK_ENTER
         ori t4,t4,INPUT_SWITCH
+
+READ_INPUT_CHECK_ENTER:
+        # Enter: scancode Linux 28 -> byte 3, bit 4
+        lbu t1,3(t0)
+        andi t2,t1,0x10
+        beqz t2,READ_INPUT_STORE_CURRENT
+        ori t4,t4,INPUT_ENTER
         j READ_INPUT_STORE_CURRENT
 
 READ_INPUT_MACOS:
@@ -275,8 +287,14 @@ READ_INPUT_CHECK_MAC_L:
         # L: scancode 37 -> byte 4, bit 5
         lbu t1,4(t0)
         andi t2,t1,0x20
-        beqz t2,READ_INPUT_STORE_CURRENT
+        beqz t2,READ_INPUT_CHECK_MAC_ENTER
         ori t4,t4,INPUT_SWITCH
+
+READ_INPUT_CHECK_MAC_ENTER:
+        # Enter: scancode ANSI 36 -> byte 4, bit 4
+        andi t2,t1,0x10
+        beqz t2,READ_INPUT_STORE_CURRENT
+        ori t4,t4,INPUT_ENTER
         j READ_INPUT_STORE_CURRENT
 
 READ_INPUT_FPGA:
@@ -324,8 +342,14 @@ READ_INPUT_CHECK_PS2_K:
 READ_INPUT_CHECK_PS2_L:
         li t2,PS2_MASK_L
         and t3,t1,t2
-        beqz t3,READ_INPUT_STORE_CURRENT
+        beqz t3,READ_INPUT_CHECK_PS2_ENTER
         ori t4,t4,INPUT_SWITCH
+
+READ_INPUT_CHECK_PS2_ENTER:
+        li t2,PS2_MASK_ENTER
+        and t3,t1,t2
+        beqz t3,READ_INPUT_STORE_CURRENT
+        ori t4,t4,INPUT_ENTER
 
 READ_INPUT_STORE_CURRENT:
         la t0,INPUT_CURRENT

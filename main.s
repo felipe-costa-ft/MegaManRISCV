@@ -13,6 +13,7 @@
 .include "assets/maps/MAPA2_entidades.s"
 .include "assets/maps/MAPA2_colisao.s"
 .include "assets/maps/MAPA2_visual.s"
+.include "assets/maps/TITULO_visual.s"
 .include "assets/sprites/player/megaman_frames.data"
 .include "assets/sprites/player/shoot.data"
 .include "assets/sprites/enemies/enemy1_frames.data"
@@ -20,10 +21,25 @@
 .include "assets/sprites/enemies/boss_frames.data"
 .include "assets/sprites/misc/dead_frames.data"
 .include "assets/sprites/misc/items_frames.data"
+.include "assets/sprites/misc/title_frame.data"
+.include "assets/sprites/misc/start_text.data"
+.include "assets/sprites/misc/game_over_text.data"
+.include "assets/sprites/misc/selection_arrow.data"
 .include "assets/sprites/hud/lifeBar.data"
 
 BG_POS:     .half 0, 0
 OLD_BG_POS: .half 0, 0
+
+.eqv GAME_STATE_TITLE,    0
+.eqv GAME_STATE_PLAYING,  1
+.eqv GAME_STATE_GAMEOVER, 2
+.eqv GAMEOVER_DURATION, 120
+.eqv TITLE_MAP_COLS, 20
+.eqv TITLE_MAP_ROWS, 15
+
+GAME_STATE:       .word GAME_STATE_TITLE
+GAME_STATE_TIMER: .word 0
+TITLE_BLINK_TIMER:.word 0
 
 .eqv MAP_DESC_VISUAL_OFF, 0
 .eqv MAP_DESC_COLISAO_OFF, 4
@@ -73,21 +89,95 @@ CURRENT_MAP_DESCRIPTOR:     .word MAPA1_DESCRIPTOR
 
 main:
         li s0, 0
-        call PLAYER_RESET_HP
-        call PLAYER_RESET_MP
-        la a0, MAPA1_DESCRIPTOR
-        call GAME_LOAD_MAP
+        call GAME_ENTER_TITLE
 
 GAME_LOOP:
 
         call READ_INPUT
-        call UPDATE_GAME
-        call RENDER_FRAME
+        call GAME_UPDATE_STATE
+        call GAME_RENDER_STATE
         call PRESENT_FRAME
         call SWAP_FRAMEBUFFER
         call WAIT_FRAME
 
         j GAME_LOOP
+
+GAME_ENTER_TITLE:
+        la t0, GAME_STATE
+        li t1, GAME_STATE_TITLE
+        sw t1, 0(t0)
+        la t0, GAME_STATE_TIMER
+        sw zero, 0(t0)
+        la t0, TITLE_BLINK_TIMER
+        sw zero, 0(t0)
+        la t0, BG_POS
+        sh zero, 0(t0)
+        sh zero, 2(t0)
+        ret
+
+GAME_START_PLAYING:
+        addi sp, sp, -4
+        sw ra, 0(sp)
+        call PLAYER_RESET_HP
+        call PLAYER_RESET_MP
+        la a0, MAPA1_DESCRIPTOR
+        call GAME_LOAD_MAP
+        la t0, GAME_STATE
+        li t1, GAME_STATE_PLAYING
+        sw t1, 0(t0)
+        lw ra, 0(sp)
+        addi sp, sp, 4
+        ret
+
+GAME_ENTER_GAMEOVER:
+        la t0, GAME_STATE
+        li t1, GAME_STATE_GAMEOVER
+        sw t1, 0(t0)
+        la t0, GAME_STATE_TIMER
+        li t1, GAMEOVER_DURATION
+        sw t1, 0(t0)
+        la t0, BG_POS
+        sh zero, 0(t0)
+        sh zero, 2(t0)
+        ret
+
+GAME_UPDATE_STATE:
+        addi sp, sp, -4
+        sw ra, 0(sp)
+        la t0, GAME_STATE
+        lw t1, 0(t0)
+        li t2, GAME_STATE_PLAYING
+        beq t1, t2, _GAME_UPDATE_PLAYING
+        li t2, GAME_STATE_GAMEOVER
+        beq t1, t2, _GAME_UPDATE_GAMEOVER
+
+        la t0, TITLE_BLINK_TIMER
+        lw t1, 0(t0)
+        addi t1, t1, 1
+        sw t1, 0(t0)
+        la t0, INPUT_PRESSED
+        lw t1, 0(t0)
+        andi t1, t1, 0x80
+        beqz t1, _GAME_UPDATE_STATE_DONE
+        call GAME_START_PLAYING
+        j _GAME_UPDATE_STATE_DONE
+
+_GAME_UPDATE_PLAYING:
+        call UPDATE_GAME
+        j _GAME_UPDATE_STATE_DONE
+
+_GAME_UPDATE_GAMEOVER:
+        la t0, GAME_STATE_TIMER
+        lw t1, 0(t0)
+        addi t1, t1, -1
+        sw t1, 0(t0)
+        bnez t1, _GAME_UPDATE_STATE_DONE
+        call GAME_ENTER_TITLE
+
+_GAME_UPDATE_STATE_DONE:
+        lw ra, 0(sp)
+        addi sp, sp, 4
+        ret
 
 # MAP_SET_CURRENT
 # a0 = endereco do descriptor do mapa
@@ -180,14 +270,20 @@ UPDATE_GAME:
 
         call PLAYER_UPDATE
         call GAME_CHECK_PLAYER_DEAD
-        bnez a0, _UPDATE_GAME_AFTER_TRANSITION
+        beqz a0, _UPDATE_GAME_CHECK_MAP
+        call GAME_ENTER_GAMEOVER
+        j _UPDATE_GAME_AFTER_TRANSITION
 
+_UPDATE_GAME_CHECK_MAP:
         call GAME_CHECK_MAP_TRANSITION
         bnez a0, _UPDATE_GAME_AFTER_TRANSITION
 
         call BOSS_CHECK_RESTART
-        bnez a0, _UPDATE_GAME_AFTER_TRANSITION
+        beqz a0, _UPDATE_GAME_CONTINUE
+        call GAME_ENTER_GAMEOVER
+        j _UPDATE_GAME_AFTER_TRANSITION
 
+_UPDATE_GAME_CONTINUE:
         call ITEMS_UPDATE
 
         la t0, PLAYER_FREEZE_TIMER
@@ -199,6 +295,13 @@ UPDATE_GAME:
         call BOSS_UPDATE
 
 _UPDATE_GAME_AFTER_TRANSITION:
+        # GAME_ENTER_GAMEOVER zera a camera para o mapa TITULO. Nao deixe a
+        # camera do mapa anterior sobrescrever essa posicao no mesmo frame.
+        la t0, GAME_STATE
+        lw t1, 0(t0)
+        li t2, GAME_STATE_PLAYING
+        bne t1, t2, _UPDATE_GAME_DONE
+
         call CAMERA_UPDATE
 
         # O build fpga.s define gp=0; nos simuladores ele aponta para extern.
@@ -209,12 +312,14 @@ _UPDATE_GAME_AFTER_TRANSITION:
 
 _UPDATE_GAME_SKIP_MUSIC:
 
+_UPDATE_GAME_DONE:
+
         lw   ra, 0(sp)
         addi sp, sp, 4
         ret
 
 # GAME_CHECK_PLAYER_DEAD
-# Reinicia o jogo no MAPA1 quando a vida do player chega a zero.
+# Retorna 1 quando a vida do player chega a zero.
 GAME_CHECK_PLAYER_DEAD:
         addi sp, sp, -4
         sw   ra, 0(sp)
@@ -223,10 +328,6 @@ GAME_CHECK_PLAYER_DEAD:
         lbu t1, 0(t0)
         bnez t1, _GAME_CHECK_PLAYER_DEAD_FALSE
 
-        call PLAYER_RESET_HP
-        call PLAYER_RESET_MP
-        la a0, MAPA1_DESCRIPTOR
-        call GAME_LOAD_MAP
         li a0, 1
         j _GAME_CHECK_PLAYER_DEAD_DONE
 
@@ -237,6 +338,13 @@ _GAME_CHECK_PLAYER_DEAD_DONE:
         lw   ra, 0(sp)
         addi sp, sp, 4
         ret
+
+GAME_RENDER_STATE:
+        la t0, GAME_STATE
+        lw t1, 0(t0)
+        li t2, GAME_STATE_PLAYING
+        beq t1, t2, RENDER_FRAME
+        j RENDER_TITLE_SCREEN
 
 RENDER_FRAME:
         addi sp, sp, -8
@@ -271,6 +379,61 @@ RENDER_FRAME:
         mv a3, s2
         call HUD_RENDER
 
+        lw s2, 4(sp)
+        lw ra, 0(sp)
+        addi sp, sp, 8
+        ret
+
+RENDER_TITLE_SCREEN:
+        addi sp, sp, -8
+        sw ra, 0(sp)
+        sw s2, 4(sp)
+
+        call GAME_GET_FRAMEBUFFER_ADDR
+        mv s2, a0
+        la a0, TITULO_VISUAL
+        li a1, TITLE_MAP_COLS
+        li a2, TITLE_MAP_ROWS
+        mv a3, s2
+        call RENDER_MAPA
+
+        la a0, TITLE_FRAME
+        li a1, 108
+        li a2, 99
+        mv a3, s2
+        li a4, 0
+        call PRINT
+
+        la t0, GAME_STATE
+        lw t1, 0(t0)
+        li t2, GAME_STATE_GAMEOVER
+        beq t1, t2, _RENDER_GAMEOVER_TEXT
+
+        la a0, START_TEXT
+        li a1, 140
+        li a2, 116
+        mv a3, s2
+        call PRINT_TRANSPARENT
+
+        la t0, TITLE_BLINK_TIMER
+        lw t1, 0(t0)
+        andi t1, t1, 0x10
+        bnez t1, _RENDER_TITLE_DONE
+        la a0, SELECTION_ARROW
+        li a1, 128
+        li a2, 116
+        mv a3, s2
+        call PRINT_TRANSPARENT
+        j _RENDER_TITLE_DONE
+
+_RENDER_GAMEOVER_TEXT:
+        la a0, GAMEOVER_TEXT
+        li a1, 124
+        li a2, 116
+        mv a3, s2
+        call PRINT_TRANSPARENT
+
+_RENDER_TITLE_DONE:
         lw s2, 4(sp)
         lw ra, 0(sp)
         addi sp, sp, 8

@@ -53,6 +53,37 @@ PRINT_FLIP_PIXEL:
     blt  t2, t5, PRINT_FLIP_LINHA
     ret
 
+# PRINT_TRANSPARENT: desenha uma imagem sem copiar pixels de cor 199.
+# As telas de titulo usam apenas coordenadas inteiramente dentro da tela.
+# a0 = imagem, a1 = x, a2 = y, a3 = framebuffer
+PRINT_TRANSPARENT:
+    lw   t4, 0(a0)
+    lw   t5, 4(a0)
+    addi t1, a0, IMG_HEADER_BYTES
+    li   t0, SCREEN_W
+    mul  t2, a2, t0
+    add  t0, a3, t2
+    add  t0, t0, a1
+    li   t2, 0
+_PRINT_TRANSPARENT_ROW:
+    li   t3, 0
+_PRINT_TRANSPARENT_PIXEL:
+    lbu  t6, 0(t1)
+    li   a5, 199
+    beq  t6, a5, _PRINT_TRANSPARENT_SKIP
+    sb   t6, 0(t0)
+_PRINT_TRANSPARENT_SKIP:
+    addi t1, t1, 1
+    addi t0, t0, 1
+    addi t3, t3, 1
+    blt  t3, t4, _PRINT_TRANSPARENT_PIXEL
+    li   t6, SCREEN_W
+    sub  t6, t6, t4
+    add  t0, t0, t6
+    addi t2, t2, 1
+    blt  t2, t5, _PRINT_TRANSPARENT_ROW
+    ret
+
 
 # RENDER_ENTITY: desenha imagem ancorada na base esquerda
 # a0 = imagem
