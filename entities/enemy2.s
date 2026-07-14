@@ -56,6 +56,7 @@ ENEMY2_SHOTS_X:      .half 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ENEMY2_SHOTS_Y:      .half 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ENEMY2_SHOTS_VX:     .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ENEMY2_SHOTS_VY:     .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+ENEMY2_RESPAWN_TIMER:.word 0, 0, 0, 0, 0
 
 .text
 
@@ -92,6 +93,11 @@ _ENEMY2_SETUP_LOOP:
     sw t0, ENEMY2_ALIVE_OFF(s2)
 
     sw zero, ENEMY2_SHOOT_TIMER_OFF(s2)
+
+    la t0, ENEMY2_RESPAWN_TIMER
+    slli t1, s1, 2
+    add t0, t0, t1
+    sw zero, 0(t0)
 
     addi s3, s3, MAPA_ENTITY_POSITION_SIZE_BYTES
     addi s2, s2, ENEMY2_SIZE
@@ -143,7 +149,19 @@ _ENEMY2_UPDATE_LOOP:
     beq s0, s1, _ENEMY2_UPDATE_DONE
 
     lw t0, ENEMY2_ALIVE_OFF(s2)
-    beqz t0, _ENEMY2_UPDATE_NEXT
+    bnez t0, _ENEMY2_UPDATE_ALIVE
+
+    mv a0, s0
+    mv a1, s2
+    call ENEMY2_UPDATE_RESPAWN
+    j _ENEMY2_UPDATE_NEXT
+
+_ENEMY2_UPDATE_ALIVE:
+    lh a0, ENEMY2_X_OFF(s2)
+    lh a1, ENEMY2_Y_OFF(s2)
+    li a2, ENEMY_WAKE_MARGIN
+    call IS_WORLD_POSITION_NEAR_SCREEN
+    beqz a0, _ENEMY2_UPDATE_NEXT
 
     mv a0, s2
     call ENEMY2_UPDATE_ONE
@@ -160,6 +178,61 @@ _ENEMY2_UPDATE_DONE:
     lw   s0, 4(sp)
     lw   ra, 0(sp)
     addi sp, sp, 20
+    ret
+
+# Mesmo contrato de ENEMY1_UPDATE_RESPAWN para os slots de Enemy 2.
+ENEMY2_UPDATE_RESPAWN:
+    addi sp, sp, -16
+    sw ra, 0(sp)
+    sw s0, 4(sp)
+    sw s1, 8(sp)
+    sw s2, 12(sp)
+    mv s0, a0
+    mv s1, a1
+
+    la t0, ENEMY2_RESPAWN_TIMER
+    slli t1, s0, 2
+    add s2, t0, t1
+    lw t2, 0(s2)
+    beqz t2, _ENEMY2_RESPAWN_CHECK_SCREEN
+    addi t2, t2, -1
+    sw t2, 0(s2)
+    j _ENEMY2_RESPAWN_DONE
+
+_ENEMY2_RESPAWN_CHECK_SCREEN:
+    la t0, CURRENT_MAP_INIMIGO2
+    lw a0, 0(t0)
+    slli t1, s0, 1
+    add a0, a0, t1
+    mv a1, s1
+    call LOAD_ENTITY_POSITION
+
+    lh a0, ENEMY2_X_OFF(s1)
+    lh a1, ENEMY2_Y_OFF(s1)
+    call WORLD_TO_SCREEN_POSITION
+    li t0, -24
+    blt a0, t0, _ENEMY2_RESPAWN_NOW
+    li t0, SCREEN_W
+    bge a0, t0, _ENEMY2_RESPAWN_NOW
+    li t0, -24
+    blt a1, t0, _ENEMY2_RESPAWN_NOW
+    li t0, SCREEN_H
+    blt a1, t0, _ENEMY2_RESPAWN_DONE
+
+_ENEMY2_RESPAWN_NOW:
+    sw zero, ENEMY2_VEL_X_OFF(s1)
+    sw zero, ENEMY2_STATE_OFF(s1)
+    sw zero, ENEMY2_FRAME_OFF(s1)
+    sw zero, ENEMY2_SHOOT_TIMER_OFF(s1)
+    li t0, 1
+    sw t0, ENEMY2_ALIVE_OFF(s1)
+
+_ENEMY2_RESPAWN_DONE:
+    lw s2, 12(sp)
+    lw s1, 8(sp)
+    lw s0, 4(sp)
+    lw ra, 0(sp)
+    addi sp, sp, 16
     ret
 
 
@@ -511,6 +584,11 @@ _ENEMY2_HANDLE_SHOT_COLLISION_LOOP:
 
     sw zero, ENEMY2_ALIVE_OFF(t0)
     sw zero, ENEMY2_VEL_X_OFF(t0)
+    la t1, ENEMY2_RESPAWN_TIMER
+    slli t2, s4, 2
+    add t1, t1, t2
+    li t2, ENEMY_RESPAWN_DELAY
+    sw t2, 0(t1)
     lh s0, ENEMY2_X_OFF(t0)
     lh s1, ENEMY2_Y_OFF(t0)
     mv a0, s0

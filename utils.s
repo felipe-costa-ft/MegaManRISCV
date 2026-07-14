@@ -52,6 +52,38 @@ WORLD_TO_SCREEN_POSITION:
     sub  a1, a1, t2
     ret
 
+# IS_WORLD_POSITION_NEAR_SCREEN
+# a0 = x no mundo, a1 = y no mundo, a2 = margem fora do viewport
+# retorna a0 = 1 dentro da tela expandida; 0 se deve permanecer adormecido.
+IS_WORLD_POSITION_NEAR_SCREEN:
+    addi sp, sp, -8
+    sw ra, 0(sp)
+    sw s1, 4(sp)
+    mv s1, a2
+    call WORLD_TO_SCREEN_POSITION
+
+    sub t0, zero, s1
+    blt a0, t0, _IS_WORLD_POSITION_NEAR_SCREEN_FALSE
+    li t0, SCREEN_W
+    add t0, t0, s1
+    bge a0, t0, _IS_WORLD_POSITION_NEAR_SCREEN_FALSE
+    sub t0, zero, s1
+    blt a1, t0, _IS_WORLD_POSITION_NEAR_SCREEN_FALSE
+    li t0, SCREEN_H
+    add t0, t0, s1
+    bge a1, t0, _IS_WORLD_POSITION_NEAR_SCREEN_FALSE
+    li a0, 1
+    j _IS_WORLD_POSITION_NEAR_SCREEN_DONE
+
+_IS_WORLD_POSITION_NEAR_SCREEN_FALSE:
+    li a0, 0
+
+_IS_WORLD_POSITION_NEAR_SCREEN_DONE:
+    lw s1, 4(sp)
+    lw ra, 0(sp)
+    addi sp, sp, 8
+    ret
+
 # MAP_GRID_TO_SCREEN_POSITION
 # a0 = coluna no mapa, em tiles
 # a1 = linha no mapa, em tiles

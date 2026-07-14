@@ -31,6 +31,8 @@ KNOCKBACK_VEL_X:         .word 0
 .eqv BOSS_HP_MAX 28
 .eqv BOSS_DEATH_RESTART_DELAY 120
 .eqv ITEM_RECHARGE_AMOUNT 4
+.eqv ENEMY_RESPAWN_DELAY 180  # 5,4 s a 30 ms/frame; pausa no Time Stopper
+.eqv ENEMY_WAKE_MARGIN 32     # acorda pouco antes de entrar no viewport
 
 .eqv PLAYER_WEAPON_NORMAL       0
 .eqv PLAYER_WEAPON_FREEZE       1
