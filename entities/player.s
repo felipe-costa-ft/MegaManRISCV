@@ -444,6 +444,9 @@ _PLAYER_SHOOT_DONE:
 # PLAYER_START_FREEZE
 # Ativa a paralisia temporaria dos inimigos.
 PLAYER_START_FREEZE:
+    addi sp, sp, -4
+    sw ra, 0(sp)
+
     la t0, PLAYER_MP
     lbu t1, 0(t0)
     li t2, PLAYER_FREEZE_COST
@@ -459,6 +462,8 @@ PLAYER_START_FREEZE:
     call SFX_PLAY
 
 _PLAYER_START_FREEZE_DONE:
+    lw ra, 0(sp)
+    addi sp, sp, 4
     ret
 
 # PLAYER_JUMP
