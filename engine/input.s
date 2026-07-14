@@ -121,21 +121,6 @@ READ_INPUT:
         lw t6,0(t5)
         bnez t6,READ_INPUT_DISPATCH
 
-        # FPGA: os bits PS/2 usados nao coincidem com os scancodes dos
-        # simuladores. Testa primeiro para manter o hardware independente.
-        lw t1,0(t0)
-        li t2,0x38000000     # S, A, W
-        and t3,t1,t2
-        bnez t3,READ_INPUT_SELECT_FPGA
-        lw t1,4(t0)
-        li t2,0x08000008     # D, J
-        and t3,t1,t2
-        bnez t3,READ_INPUT_SELECT_FPGA
-        lw t1,8(t0)
-        li t2,0x06000804     # K, L, Enter (duas variantes da v24)
-        and t3,t1,t2
-        bnez t3,READ_INPUT_SELECT_FPGA
-
         # macOS: A/S/D, W e K ficam em bits exclusivos desse backend.
         lw t1,0(t0)
         andi t3,t1,0x07
@@ -177,11 +162,6 @@ READ_INPUT_SELECT_MACOS:
         li t6,INPUT_KEYMAP_MACOS
         sw t6,0(t5)
         j READ_INPUT_MACOS
-
-READ_INPUT_SELECT_FPGA:
-        li t6,INPUT_KEYMAP_FPGA
-        sw t6,0(t5)
-        j READ_INPUT_FPGA
 
 READ_INPUT_DISPATCH:
         li t1,INPUT_KEYMAP_MACOS
